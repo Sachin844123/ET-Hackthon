@@ -1,0 +1,131 @@
+[
+  {
+    "event_id": "4663",
+    "sequence": 1,
+    "timestamp": "2022-11-22T03:00:00+05:30",
+    "host": "AIIMS-FILE-SRV-02",
+    "account": "SYSTEM",
+    "event_type": "mass_file_rename",
+    "process_name": "svhost32.exe",
+    "process_id": "0x7f1a",
+    "parent_process_name": "MicrosoftEdgeUpdateTaskMachineUA",
+    "parent_process_id": "0x7e09",
+    "rename_statistics": {
+      "total_files_renamed": 284712,
+      "rename_rate_per_second": 312,
+      "start_time": "2022-11-22T03:00:00+05:30",
+      "estimated_completion_time": "2022-11-22T03:15:16+05:30",
+      "extension_mapping": "*.docx → *.docx.AIIMS_LOCKED, *.xlsx → *.xlsx.AIIMS_LOCKED, *.pdf → *.pdf.AIIMS_LOCKED, *.jpg → *.jpg.AIIMS_LOCKED, *.db → *.db.AIIMS_LOCKED"
+    },
+    "affected_paths": [
+      "\\\\AIIMS-FILE-SRV-02\\patients\\",
+      "\\\\AIIMS-FILE-SRV-02\\admin\\",
+      "\\\\AIIMS-FILE-SRV-02\\research\\",
+      "\\\\AIIMS-FILE-SRV-02\\backups\\",
+      "C:\\ProgramData\\AIIMS-HIS\\",
+      "C:\\inetpub\\wwwroot\\"
+    ],
+    "encryption_algorithm": "AES-256-CTR (key wrapped with RSA-4096 public key — decryption requires attacker private key)",
+    "mitre_technique": "T1486",
+    "mitre_technique_name": "Data Encrypted for Impact",
+    "baseline_deviation_score": 0.99,
+    "anomaly_signals": [
+      "mass_rename_rate: 312 file renames/second — no legitimate process performs bulk renames at this rate",
+      "ransomware_extension: .AIIMS_LOCKED extension — targeted ransomware, customized to victim organization name",
+      "3am_deployment: 3:00 AM IST — maximum impact, minimum immediate response staff",
+      "spawned_from_persistence: svhost32.exe (note: fake svchost spelling) launched from Day 3 persistence mechanism",
+      "all_shares_targeted: 6 different network paths — attacker mapped all shares over 22 days before deploying",
+      "hospital_critical_impact: patient records, HIS database encrypted — clinical operations immediately halted"
+    ],
+    "ground_truth_note": "MALICIOUS: Ransomware deployment. The customized '.AIIMS_LOCKED' extension confirms this is a targeted attack — the ransomware binary was compiled specifically for AIIMS Delhi, not a commodity ransomware campaign. The 312 files/second rename rate means 284,712 patient records were encrypted in ~15 minutes. The process name 'svhost32.exe' is a deliberate typo of the legitimate 'svchost.exe' — a last-minute masquerade. It's spawned by the same persistence task established 19 days ago on Day 3. This is the culmination of a 22-day operation."
+  },
+  {
+    "event_id": "11",
+    "sequence": 2,
+    "timestamp": "2022-11-22T03:00:47+05:30",
+    "host": "AIIMS-FILE-SRV-02",
+    "account": "SYSTEM",
+    "event_type": "file_create_mass",
+    "process_name": "svhost32.exe",
+    "file_created": "READ_THIS_AIIMS.txt",
+    "file_content_excerpt": "YOUR FILES HAVE BEEN ENCRYPTED\n\nAll patient records, administrative documents, and research data at AIIMS Delhi have been encrypted with military-grade encryption.\n\nTo restore your systems:\n1. Do NOT attempt to decrypt files yourself — this will cause permanent data loss\n2. Do NOT contact law enforcement — this will result in publication of patient data\n3. Contact us within 72 hours: aiims_recovery@protonmail.com\n\nProof of decryption available for 5 sample files.\nRansom amount: USD 6,500,000 in Bitcoin\nBitcoin address: bc1qxy2kgdygjrsqtzq2n0yrf4485p3tqmqkqdaqy\n\nDEADLINE: 72 HOURS\n\nData leaked if payment not received:\n- 284,712 patient records including HIV/AIDS, psychiatric, oncology\n- 15 years of AIIMS research data\n- Staff salary and HR records\n- Administrative credentials and network maps\n\nWe have already exfiltrated all data. Payment prevents publication.",
+    "directories_written": 8441,
+    "mitre_technique": "T1486",
+    "baseline_deviation_score": 0.99,
+    "anomaly_signals": [
+      "ransom_note_mass_write: 8441 instances of READ_THIS_AIIMS.txt written — one in every directory",
+      "protonmail_contact: encrypted email service for anonymized attacker communication",
+      "bitcoin_demand: $6.5M ransom — consistent with nation-state-linked groups' healthcare targeting demands",
+      "data_leak_threat: confirms exfiltration already occurred (consistent with Day 12 data exfiltration we detected)",
+      "aiims_specific: note written specifically for AIIMS — targeted attack confirmation"
+    ],
+    "ground_truth_note": "MALICIOUS: The ransom note confirms the double-extortion model — data was already exfiltrated (consistent with the 2.3GB exfiltration detected on Day 12) AND systems are now encrypted. The $6.5M demand and the threat to publish HIV/AIDS, psychiatric, and oncology patient records (maximum sensitivity data) confirm this is a sophisticated, targeted attack with pre-planned leverage. The Bitcoin address and Protonmail contact method are consistent with APT41-affiliated financial extortion operations."
+  },
+  {
+    "event_id": "7036",
+    "sequence": 3,
+    "timestamp": "2022-11-22T03:02:11+05:30",
+    "host": "AIIMS-BACKUP-SRV-01",
+    "account": "SYSTEM",
+    "event_type": "service_stopped",
+    "service_name": "wbengine",
+    "service_display_name": "Block Level Backup Engine Service",
+    "command_used": "net stop \"Block Level Backup Engine Service\" /y && sc config wbengine start= disabled",
+    "process_name": "svhost32.exe",
+    "mitre_technique": "T1490",
+    "baseline_deviation_score": 0.99,
+    "anomaly_signals": [
+      "backup_service_killed: Windows Backup Engine stopped — eliminates automated backup recovery",
+      "service_disabled: sc config start=disabled prevents service restart — persistent disablement",
+      "simultaneous_with_encryption: executed in parallel with file encryption at 3:02 AM",
+      "backup_server_targeted: attacker targeting the backup server specifically — shows awareness of recovery paths"
+    ],
+    "ground_truth_note": "MALICIOUS: The attacker stops and disables the Windows Block Level Backup Engine — the primary backup mechanism for the backup server. Combined with the Day 7 VSS deletion, this completes a comprehensive destruction of all recovery paths: (1) Volume Shadow Copies deleted Day 7, (2) Backup service disabled Day 22, (3) Files encrypted Day 22. Any attempt to recover via Windows backup mechanisms will fail. This pre-planned, multi-stage destruction of recovery capabilities is a hallmark of APT41's 'maximum impact' ransomware playbook."
+  },
+  {
+    "event_id": "4688",
+    "sequence": 4,
+    "timestamp": "2022-11-22T03:03:44+05:30",
+    "host": "AIIMS-DC-01",
+    "account": "SYSTEM",
+    "process_name": "bcdedit.exe",
+    "command_line": "bcdedit /set {default} recoveryenabled No && bcdedit /set {default} bootstatuspolicy ignoreallfailures",
+    "mitre_technique": "T1490",
+    "baseline_deviation_score": 0.99,
+    "anomaly_signals": [
+      "recovery_disabled: Windows Recovery Environment disabled — prevents boot-time file recovery",
+      "bootpolicy_override: ignoreallfailures hides boot errors — system appears to boot but OS is broken",
+      "dc_targeted: executed on domain controller — domain infrastructure recovery disabled",
+      "triple_recovery_elimination: 3rd recovery mechanism destroyed (VSS Day7 + WBEngine Day22 + WRE Day22)"
+    ],
+    "ground_truth_note": "MALICIOUS: bcdedit disables Windows Recovery Environment on the Domain Controller. Combined with VSS deletion (Day 7) and backup service stop, this is the third pillar of a comprehensive recovery prevention strategy. The 'bootstatuspolicy ignoreallfailures' setting means even if the OS fails to boot properly, it won't enter recovery mode — it will just silently fail. AIIMS IT staff would need bare-metal restore from external backup to recover the domain controller. With the DCs encrypted, all domain authentication fails, bringing all domain-joined systems offline."
+  },
+  {
+    "event_id": "4740",
+    "sequence": 5,
+    "timestamp": "2022-11-22T03:05:22+05:30",
+    "host": "AIIMS-DC-01",
+    "account": "SYSTEM",
+    "event_type": "mass_account_lockout",
+    "accounts_locked": [
+      {"account": "admin_raj", "lockout_reason": "Bad password attempts: 5", "timestamp": "2022-11-22T03:05:22+05:30"},
+      {"account": "sysadmin_vikram", "lockout_reason": "Bad password attempts: 5", "timestamp": "2022-11-22T03:05:22+05:30"},
+      {"account": "it_admin_priya", "lockout_reason": "Bad password attempts: 5", "timestamp": "2022-11-22T03:05:22+05:30"},
+      {"account": "da_operations", "lockout_reason": "Bad password attempts: 5", "timestamp": "2022-11-22T03:05:22+05:30"},
+      {"account": "helpdesk_admin", "lockout_reason": "Bad password attempts: 5", "timestamp": "2022-11-22T03:05:22+05:30"}
+    ],
+    "lockout_source_ip": "10.0.8.10",
+    "lockout_mechanism": "Automated bad-password spray against all admin accounts — deliberate lockout to prevent emergency response",
+    "mitre_technique": "T1531",
+    "mitre_technique_name": "Account Access Removal",
+    "baseline_deviation_score": 0.99,
+    "anomaly_signals": [
+      "simultaneous_lockout: all 5 domain admin accounts locked out at same second — impossible organically",
+      "response_disruption: locking admin accounts at 3 AM prevents IT staff from logging in to respond",
+      "deliberate_spray: 5 bad passwords × 5 accounts in <1 second — automated account lockout weapon",
+      "dc_as_source: lockout originated from DC itself — attacker has DC SYSTEM access, operating locally"
+    ],
+    "discovery_context": "AIIMS system administrators discovered encryption at approximately 07:00 IST when morning shift staff found systems unresponsive. Domain admin accounts were locked, requiring physical data center access and AD recovery procedures. The 4-hour gap between encryption (03:00) and discovery (07:00) eliminated any chance of hot-containment.",
+    "ground_truth_note": "MALICIOUS: Final act — the attacker simultaneously locks all domain admin accounts by triggering account lockout policy through rapid bad-password attempts. This is the 'scorched earth' final move: even if an IT admin was watching at 3 AM, they cannot log in to the domain to stop the ransomware. Simultaneous lockout of all admin accounts in the same second is impossible via organic user behavior — this is automated. AIIMS IT staff discovered the attack at 07:00 IST, 4 hours after deployment, when morning shift staff found systems encrypted and accounts locked."
+  }
+]

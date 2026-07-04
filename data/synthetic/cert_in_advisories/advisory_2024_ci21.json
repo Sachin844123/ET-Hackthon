@@ -1,0 +1,317 @@
+{
+  "advisory_id": "CERT-In/CI-21-2024",
+  "date": "2024-03-15",
+  "version": "1.0",
+  "classification": "TLP:AMBER — Share with sector peers and government agencies only",
+  "issuer": {
+    "organization": "Indian Computer Emergency Response Team (CERT-In)",
+    "division": "Ministry of Electronics and Information Technology (MeitY)",
+    "contact": "incident@cert-in.org.in",
+    "website": "https://www.cert-in.org.in"
+  },
+  "title": "CERT-In Advisory: Targeted Ransomware Campaign Against Healthcare and Education Sector Critical National Infrastructure",
+  "severity": "CRITICAL",
+  "cvss_score": 9.8,
+  "affected_sectors": [
+    "Healthcare — Public Hospitals and Medical Institutions",
+    "Education — Central Examination Bodies and Universities",
+    "Government — Public Service Delivery Systems"
+  ],
+  "summary": "CERT-In has identified an active, coordinated ransomware campaign targeting healthcare and education sector organizations in India. The threat actor demonstrates a sophisticated multi-stage attack methodology combining spearphishing, valid account exploitation, lateral movement via Windows administrative shares, and Cobalt Strike C2 infrastructure. The campaign includes a pre-encryption data exfiltration phase enabling double-extortion. Multiple Indian CNI organizations have been compromised. The threat actor's TTPs are consistent with a sophisticated, state-affiliated advanced persistent threat (APT) group with prior operational history against Asian government and healthcare targets.",
+
+  "threat_actor_profile": {
+    "designation": "CERT-In-TA-2024-009",
+    "suspected_affiliation": "Nation-state affiliated — consistent with APT41 (BARIUM, Winnti Group) documented playbook",
+    "motivation": "Dual-use: intelligence collection via data exfiltration + financial extortion via ransomware",
+    "targeting_pattern": "Spearphishing of high-value administrative accounts in public sector organizations",
+    "operational_security": "High — uses Tor exit nodes for C2, typosquat domains, Malleable C2 profiles, cleans forensic artifacts",
+    "dwell_time_observed": "14–28 days across confirmed incidents",
+    "prior_incidents": [
+      "AIIMS Delhi — November 2022 (22-day dwell, ransomware deployment)",
+      "Regional hospital chain — Q2 2023 (classified)",
+      "Government examination board — Q1 2024 (under investigation)"
+    ]
+  },
+
+  "attack_lifecycle": {
+    "stage_1_initial_access": {
+      "techniques": ["T1566.002", "T1078"],
+      "description": "Spearphishing emails with lookalike domains targeting administrative and IT accounts. Credential harvesting via adversary-in-the-middle (AiTM) phishing proxies. Valid stolen credentials used for initial authenticated access.",
+      "observed_phishing_domains": [
+        "cbse-results.in (impersonating cbse.gov.in)",
+        "aiims-portal.in (impersonating aiims.edu)",
+        "moh-india.net (impersonating mohfw.gov.in)"
+      ]
+    },
+    "stage_2_persistence": {
+      "techniques": ["T1053.005", "T1136.002"],
+      "description": "Scheduled tasks created with legitimate-looking names (Microsoft Edge Update variants). Tasks contain base64-encoded PowerShell downloading secondary payloads from C2.",
+      "observed_task_names": [
+        "MicrosoftEdgeUpdateTaskMachineUA",
+        "WinUpdateHelper64",
+        "GoogleUpdateTaskMachineCore"
+      ]
+    },
+    "stage_3_lateral_movement": {
+      "techniques": ["T1021.002", "T1550.002"],
+      "description": "SMB-based lateral movement using pass-the-hash with harvested NTLM credentials. Targets Domain Controllers for maximum domain-wide impact. Uses Windows administrative shares (admin$, C$, IPC$).",
+      "observed_pattern": "Patient/Student management servers → Domain Controllers → File servers"
+    },
+    "stage_4_collection": {
+      "techniques": ["T1560.001", "T1490"],
+      "description": "7-Zip archiving of targeted data with strong encryption (-mhe=on flag). Archives staged in Windows\\Temp with misleading directory names. Volume Shadow Copy deletion before exfiltration.",
+      "staging_locations": [
+        "C:\\Windows\\Temp\\~logs\\",
+        "C:\\ProgramData\\Microsoft\\Windows\\WinUpdate64\\"
+      ]
+    },
+    "stage_5_c2_exfiltration": {
+      "techniques": ["T1071.001", "T1048"],
+      "description": "Cobalt Strike HTTPS beacon via typosquat domains resolving to Tor exit nodes. Beacon intervals: 300 seconds ±15% jitter. Data exfiltrated via chunked HTTPS POST requests.",
+      "c2_infrastructure_pattern": "Typosquat domain → Fast-flux DNS (TTL 60s) → Tor exit node → Attacker infrastructure"
+    },
+    "stage_6_impact": {
+      "techniques": ["T1486", "T1531"],
+      "description": "Custom ransomware with organization-name-branded extension (e.g., .AIIMS_LOCKED, .CBSE_LOCKED). Simultaneous admin account lockout via automated bad-password spray. Recovery environment disabled via bcdedit."
+    }
+  },
+
+  "iocs": {
+    "ip_addresses": [
+      {
+        "ip": "185.220.101.47",
+        "type": "C2 Server",
+        "description": "Tor exit node used for Cobalt Strike C2 — AIIMS Delhi incident",
+        "asn": "AS205206 (Accelerated IT Services & Consulting GmbH)",
+        "country": "Germany",
+        "first_seen": "2022-11-12",
+        "last_seen": "2024-02-28",
+        "confidence": "high"
+      },
+      {
+        "ip": "45.142.212.100",
+        "type": "C2 Server / Phishing Proxy",
+        "description": "Adversary-in-the-middle phishing proxy + C2 — CBSE incident",
+        "asn": "AS53667 (FranTech Solutions)",
+        "country": "Netherlands",
+        "first_seen": "2026-03-02",
+        "last_seen": "2026-03-14",
+        "confidence": "high"
+      },
+      {
+        "ip": "194.165.16.18",
+        "type": "C2 Server",
+        "description": "Backup C2 IP — seen in lateral movement stage of related campaign",
+        "asn": "AS49505 (Serverius Holding B.V.)",
+        "country": "Netherlands",
+        "first_seen": "2023-08-14",
+        "last_seen": "2024-01-10",
+        "confidence": "medium"
+      },
+      {
+        "ip": "91.108.56.149",
+        "type": "Exfiltration Endpoint",
+        "description": "Data exfiltration staging server — chunked HTTPS POST uploads",
+        "asn": "AS44477 (STARK INDUSTRIES SOLUTIONS LTD)",
+        "country": "United Kingdom",
+        "first_seen": "2023-11-20",
+        "last_seen": "2024-03-01",
+        "confidence": "medium"
+      }
+    ],
+    "domains": [
+      {
+        "domain": "update.microsofft.com",
+        "type": "C2 Domain (Typosquat)",
+        "description": "Double-f typosquat impersonating Windows Update — AIIMS incident primary C2",
+        "registrar": "Namecheap",
+        "registered": "2022-09-15",
+        "expires": "2023-09-15",
+        "confidence": "high"
+      },
+      {
+        "domain": "cdn.microsott-update.com",
+        "type": "C2 Domain (Typosquat)",
+        "description": "Double-t + hyphen typosquat — CBSE incident C2 domain",
+        "registrar": "Porkbun",
+        "registered": "2026-01-20",
+        "confidence": "high"
+      },
+      {
+        "domain": "cbse-results.in",
+        "type": "Phishing Domain",
+        "description": "Lookalike domain for CBSE official site — used in credential harvesting phishing campaign",
+        "registrar": "GoDaddy",
+        "registered": "2026-02-22",
+        "confidence": "high"
+      },
+      {
+        "domain": "aiims-portal.in",
+        "type": "Phishing Domain",
+        "description": "Lookalike domain for AIIMS patient portal",
+        "registrar": "BigRock",
+        "registered": "2022-09-01",
+        "confidence": "medium"
+      },
+      {
+        "domain": "windows-health-update.com",
+        "type": "C2 Domain",
+        "description": "Secondary C2 domain — seen in related regional hospital compromise",
+        "registrar": "Namecheap",
+        "registered": "2023-06-15",
+        "confidence": "medium"
+      }
+    ],
+    "file_hashes": [
+      {
+        "hash": "a94f5f3a2d8e4b1c9f7e6d2a1b3c5e8f9a0b2d4c6e8f0a2b4d6e8f0a2b4d6e8",
+        "algorithm": "SHA-256",
+        "filename": "svhost64.exe",
+        "type": "Ransomware Binary",
+        "description": "Custom ransomware — creates .CBSE_LOCKED extension variant, 892KB PE32+",
+        "first_seen": "2026-03-02",
+        "av_detections": "27/72 (VirusTotal 2026-03-15)",
+        "confidence": "high"
+      },
+      {
+        "hash": "3f1a8b2c9d4e7f6a2b5c8d1e4f7a0b3c6d9e2f5a8b1c4d7e0f3a6b9c2d5e8f1a",
+        "algorithm": "SHA-256",
+        "filename": "svhost32.exe",
+        "type": "Ransomware Binary",
+        "description": "Custom ransomware — .AIIMS_LOCKED extension variant, 856KB PE32+",
+        "first_seen": "2022-11-22",
+        "av_detections": "31/72 (VirusTotal 2022-11-22)",
+        "confidence": "high"
+      },
+      {
+        "hash": "b2c4d6e8f0a2b4d6e8f0a2b4d6e8f0a2b4d6e8f0a2b4d6e8f0a2b4d6e8f0a2b4",
+        "algorithm": "SHA-256",
+        "filename": "MicrosoftEdgeUpdate.dll",
+        "type": "Cobalt Strike Payload",
+        "description": "Cobalt Strike reflective DLL loader — masquerading as Edge update component",
+        "first_seen": "2022-11-03",
+        "av_detections": "15/72 (low detection — EDR-evading variant)",
+        "confidence": "high"
+      },
+      {
+        "hash": "d4e6f8a0b2c4d6e8f0a2b4d6e8f0a2b4d6e8f0a2b4d6e8f0a2b4d6e8f0a2b4d6",
+        "algorithm": "SHA-256",
+        "filename": "7z.exe",
+        "type": "Living-off-the-Land Binary (LOLBin)",
+        "description": "Legitimate 7-Zip binary used for data staging — hash matches official 7-Zip 22.01 but context (parent: malicious scheduled task) is malicious",
+        "first_seen": "2022-11-07",
+        "av_detections": "0/72 — legitimate binary, detect by behavior not hash",
+        "confidence": "medium",
+        "detection_note": "Block by parent process behavior, not hash — legitimate 7z.exe is not malware itself"
+      }
+    ],
+    "yara_rules": [
+      {
+        "rule_name": "CERT_IN_APT41_Ransomware_2024",
+        "rule": "rule CERT_IN_APT41_Ransomware_2024 { meta: description = \"Detects APT41-linked ransomware variants targeting Indian CNI\" author = \"CERT-In\" date = \"2024-03-15\" strings: $s1 = \".AIIMS_LOCKED\" ascii $s2 = \".CBSE_LOCKED\" ascii $s3 = \"aiims_recovery@protonmail.com\" ascii $s4 = \"cbse_crisis@tutanota.com\" ascii $pdb = \"svhost\" ascii nocase condition: any of them }"
+      }
+    ],
+    "network_signatures": [
+      {
+        "signature_name": "CERT_IN_Cobalt_Strike_JA3",
+        "type": "JA3 Hash",
+        "value": "a0e9f5d64349fb13191bc781f81f42e1",
+        "description": "Cobalt Strike HTTPS beacon JA3 fingerprint seen in both AIIMS and CBSE incidents"
+      },
+      {
+        "signature_name": "CERT_IN_Beacon_Interval",
+        "type": "Behavioral",
+        "value": "Periodic HTTPS connections at 300s ±15% jitter to external IPs from servers that should not browse internet",
+        "description": "Cobalt Strike beacon detection rule — statistical periodicity analysis required"
+      }
+    ]
+  },
+
+  "mitigation_steps": [
+    {
+      "priority": 1,
+      "action": "Block IOC IPs and Domains",
+      "details": "Immediately block all listed IPs and domains at perimeter firewall and DNS resolver. Configure DNS RPZ (Response Policy Zones) for domain-based blocking. Alert on any existing connections to these endpoints.",
+      "applicable_to": "Network Operations, Firewall Administrators"
+    },
+    {
+      "priority": 2,
+      "action": "Audit Service Account Privileges",
+      "details": "Review all service accounts for excessive privileges. Apply principle of least privilege — backup service accounts should NOT have Domain Admin rights. Audit nested group memberships in Active Directory.",
+      "applicable_to": "Identity and Access Management Teams"
+    },
+    {
+      "priority": 3,
+      "action": "Enable EDR on All Servers",
+      "details": "Deploy endpoint detection and response on all servers, especially Domain Controllers and file servers. Configure alerts for: (1) cmd.exe spawned by service accounts, (2) vssadmin delete commands, (3) 7z.exe with -p flag from unusual parent processes.",
+      "applicable_to": "Endpoint Security Teams"
+    },
+    {
+      "priority": 4,
+      "action": "Implement Behavioral Anomaly Detection",
+      "details": "Deploy User and Entity Behavior Analytics (UEBA) to detect: (1) service account logons outside business hours, (2) SMB connections from non-administrative hosts, (3) outbound connections from Domain Controllers, (4) periodic beaconing patterns.",
+      "applicable_to": "SOC, Detection Engineering Teams"
+    },
+    {
+      "priority": 5,
+      "action": "Protect Volume Shadow Copies",
+      "details": "Configure Windows to require admin MFA before vssadmin operations. Monitor for vssadmin delete shadows commands. Maintain offline backups disconnected from the network — online backups are vulnerable to this threat actor.",
+      "applicable_to": "Backup Administrators"
+    },
+    {
+      "priority": 6,
+      "action": "Domain Controller Network Isolation",
+      "details": "Domain Controllers should NEVER make direct outbound internet connections. Implement strict firewall rules: no outbound connections from DC to internet. Route all DC internet access (Windows Update, NTP) through proxy with allowlisting.",
+      "applicable_to": "Network Security, Active Directory Teams"
+    },
+    {
+      "priority": 7,
+      "action": "Phishing-Resistant MFA for Admin Accounts",
+      "details": "Implement hardware FIDO2 security keys for all privileged accounts. SMS and app-based OTP MFA is susceptible to AiTM attacks used in this campaign. Conditional access policies: geo-block authentication from foreign IPs for government systems.",
+      "applicable_to": "Identity and Access Management Teams"
+    },
+    {
+      "priority": 8,
+      "action": "Mandatory Incident Reporting",
+      "details": "Under CERT-In directions (April 2022), all incidents involving ransomware targeting CNI must be reported to CERT-In within 6 hours of detection. Contact: incident@cert-in.org.in, Phone: 1800-11-4949",
+      "applicable_to": "CISOs, Legal and Compliance Teams",
+      "regulatory_reference": "CERT-In Directions dated 28 April 2022 under Section 70B(6) of IT Act 2000"
+    }
+  ],
+
+  "detection_rules": {
+    "sigma_rules": [
+      {
+        "rule_id": "CERTIN_2024_001",
+        "title": "Service Account Logon Outside Business Hours",
+        "logsource": "Windows Security Event 4624",
+        "condition": "account_name ends with '$' AND logon_type = 3 AND (hour < 8 OR hour > 18) AND weekday in (1,2,3,4,5) AND NOT (known_scheduled_task_ips contains source_ip)"
+      },
+      {
+        "rule_id": "CERTIN_2024_002",
+        "title": "SMB Sweep Detection",
+        "logsource": "Network Flow",
+        "condition": "dst_port = 445 AND count(distinct dst_ip) > 3 within 30 seconds from same src_ip AND NOT (src_ip in backup_servers)"
+      },
+      {
+        "rule_id": "CERTIN_2024_003",
+        "title": "vssadmin Shadow Copy Deletion",
+        "logsource": "Windows Security Event 4688",
+        "condition": "process_name = 'vssadmin.exe' AND command_line contains 'delete shadows'"
+      },
+      {
+        "rule_id": "CERTIN_2024_004",
+        "title": "Domain Controller Outbound Internet Connection",
+        "logsource": "Network Flow",
+        "condition": "src_ip in domain_controllers AND dst_ip NOT in (internal_ranges, known_microsoft_update_ips, ntp_servers) AND dst_port in (80, 443)"
+      }
+    ]
+  },
+
+  "references": [
+    "MITRE ATT&CK Group G0096 — APT41: https://attack.mitre.org/groups/G0096/",
+    "CERT-In Directions April 2022: https://www.cert-in.org.in/PDF/CERT-In_Directions_70B.pdf",
+    "NCIIPC Guidelines for Critical Information Infrastructure: https://nciipc.gov.in/",
+    "National Cyber Security Policy 2013: https://meity.gov.in/writereaddata/files/National_cyber_security_policy-2013(1).pdf"
+  ]
+}

@@ -1,0 +1,193 @@
+[
+  {
+    "event_id": "DNS_QUERY",
+    "sequence": 1,
+    "timestamp": "2022-11-12T08:01:04+05:30",
+    "host": "AIIMS-DC-01",
+    "source_ip": "10.0.8.10",
+    "query_domain": "update.microsofft.com",
+    "query_type": "A",
+    "response_ip": "185.220.101.47",
+    "response_code": "NOERROR",
+    "ttl": 60,
+    "resolver_ip": "10.0.8.3",
+    "mitre_technique": "T1071.001",
+    "mitre_technique_name": "Application Layer Protocol: Web Protocols",
+    "anomaly_signals": [
+      "typosquat_domain: 'microsofft.com' (double-f) vs legitimate 'microsoft.com' — classic typosquatting",
+      "tor_exit_node: 185.220.101.47 is a known Tor exit node (listed in Tor Project consensus, AbuseIPDB)",
+      "low_ttl: TTL=60 seconds — fast-flux DNS to evade blocklisting, legitimate Microsoft uses TTL 300+",
+      "novel_external_domain: zero baseline entries for any microsofft.com query — first time seen in environment",
+      "dc_dns_to_external: domain controller querying external DNS for what appears to be Microsoft infrastructure is unusual"
+    ],
+    "threat_intel_match": {
+      "ip_reputation": "185.220.101.47 — Tor Exit Node, ASN: AS205206 (Accelerated IT Services & Consulting GmbH)",
+      "domain_reputation": "update.microsofft.com — registered 2022-09-15, 0 legitimate references, flagged by VirusTotal 14/90",
+      "ioc_feed_match": "Matches CERT-In advisory CI-21-2024 indicator family (see cert_in_advisories)"
+    },
+    "baseline_deviation_score": 0.99,
+    "ground_truth_note": "MALICIOUS: The typosquat 'microsofft.com' (double-f) resolving to a Tor exit node is the single clearest C2 indicator in this entire attack chain. Any threat intel feed, domain reputation check, or simple character-diff against known Microsoft domains would catch this. The 60-second TTL indicates fast-flux infrastructure — the C2 operator rotates IPs frequently to evade DNS-based blocklisting. This DNS query, logged and cross-referenced against ANY threat intel source, would have been a definitive high-confidence alert."
+  },
+  {
+    "event_id": "5156",
+    "sequence": 2,
+    "timestamp": "2022-11-12T08:01:17+05:30",
+    "host": "AIIMS-DC-01",
+    "source_ip": "10.0.8.10",
+    "dst_ip": "185.220.101.47",
+    "src_port": 52891,
+    "dst_port": 443,
+    "protocol": "HTTPS",
+    "bytes_sent": 4096,
+    "bytes_recv": 204800,
+    "http_method": "POST",
+    "http_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "tls_sni": "update.microsofft.com",
+    "tls_version": "TLS 1.3",
+    "tls_ja3_hash": "a0e9f5d64349fb13191bc781f81f42e1",
+    "certificate_issuer": "Let's Encrypt",
+    "certificate_cn": "update.microsofft.com",
+    "mitre_technique": "T1071.001",
+    "anomaly_signals": [
+      "direct_dc_internet: domain controller making direct outbound internet connection — DCs should NEVER browse internet",
+      "tor_exit_destination: connecting directly to known Tor exit node 185.220.101.47",
+      "browser_useragent_from_dc: Mozilla/5.0 user-agent from a domain controller process — DCs don't run browsers",
+      "ja3_cobalt_strike: JA3 hash a0e9f5d64349fb13191bc781f81f42e1 is a known Cobalt Strike beacon fingerprint",
+      "letsencrypt_c2: Let's Encrypt certificate on typosquat domain — automated cert for C2, typical APT infrastructure",
+      "first_c2_beacon: initial check-in — attacker establishing persistent backdoor channel"
+    ],
+    "cobalt_strike_indicators": {
+      "c2_profile": "Malleable C2 — Microsoft Update masquerading profile",
+      "beacon_type": "HTTPS",
+      "sleep_time_seconds": 300,
+      "jitter_percent": 15
+    },
+    "baseline_deviation_score": 0.99,
+    "ground_truth_note": "MALICIOUS: Cobalt Strike HTTPS beacon identified by JA3 fingerprint. Domain controllers NEVER make outbound internet connections — this single network flow from AIIMS-DC-01 to an external IP is a critical alert. The JA3 hash matches Cobalt Strike's default HTTPS beacon. The Malleable C2 profile mimics Windows Update traffic but the destination (Tor exit, typosquat domain, Let's Encrypt cert) makes this trivially detectable. Any NDR solution watching east-west + north-south from the DC would have fired an immediate critical alert."
+  },
+  {
+    "event_id": "5156",
+    "sequence": 3,
+    "timestamp": "2022-11-12T08:06:17+05:30",
+    "host": "AIIMS-DC-01",
+    "source_ip": "10.0.8.10",
+    "dst_ip": "185.220.101.47",
+    "dst_port": 443,
+    "protocol": "HTTPS",
+    "bytes_sent": 1024,
+    "bytes_recv": 512,
+    "beacon_number": 2,
+    "interval_from_previous_seconds": 300,
+    "mitre_technique": "T1071.001",
+    "baseline_deviation_score": 0.99,
+    "anomaly_signals": ["beacon_regularity: exactly 300 seconds from previous connection"],
+    "ground_truth_note": "MALICIOUS: Second beacon — 300 seconds after first. Interval begins the jitter pattern to mimic regular service queries."
+  },
+  {
+    "event_id": "5156",
+    "sequence": 4,
+    "timestamp": "2022-11-12T08:11:29+05:30",
+    "host": "AIIMS-DC-01",
+    "source_ip": "10.0.8.10",
+    "dst_ip": "185.220.101.47",
+    "dst_port": 443,
+    "protocol": "HTTPS",
+    "bytes_sent": 1024,
+    "bytes_recv": 512,
+    "beacon_number": 3,
+    "interval_from_previous_seconds": 312,
+    "mitre_technique": "T1071.001",
+    "baseline_deviation_score": 0.99,
+    "anomaly_signals": ["beacon_jitter: 312s interval (vs 300s base) — within 15% jitter envelope"],
+    "ground_truth_note": "MALICIOUS: Third beacon — 312 seconds. Jitter begins — +4% from base to evade basic threshold alarms."
+  },
+  {
+    "event_id": "5156",
+    "sequence": 5,
+    "timestamp": "2022-11-12T08:16:44+05:30",
+    "host": "AIIMS-DC-01",
+    "source_ip": "10.0.8.10",
+    "dst_ip": "185.220.101.47",
+    "dst_port": 443,
+    "protocol": "HTTPS",
+    "bytes_sent": 1024,
+    "bytes_recv": 512,
+    "beacon_number": 4,
+    "interval_from_previous_seconds": 315,
+    "mitre_technique": "T1071.001",
+    "baseline_deviation_score": 0.99,
+    "anomaly_signals": ["beacon_jitter: 315s interval (+5% jitter)"],
+    "ground_truth_note": "MALICIOUS: Fourth beacon — 315 seconds. Periodic beaconing indicates automated command and control check-in."
+  },
+  {
+    "event_id": "5156",
+    "sequence": 6,
+    "timestamp": "2022-11-12T08:22:01+05:30",
+    "host": "AIIMS-DC-01",
+    "source_ip": "10.0.8.10",
+    "dst_ip": "185.220.101.47",
+    "dst_port": 443,
+    "protocol": "HTTPS",
+    "bytes_sent": 1024,
+    "bytes_recv": 512,
+    "beacon_number": 5,
+    "interval_from_previous_seconds": 317,
+    "mitre_technique": "T1071.001",
+    "baseline_deviation_score": 0.99,
+    "c2_beacon_analysis": {
+      "observed_intervals_seconds": [300, 312, 315, 317],
+      "mean_interval_seconds": 311.0,
+      "std_deviation_seconds": 7.12,
+      "configured_sleep_seconds": 300,
+      "configured_jitter_percent": 15,
+      "max_jitter_seconds": 45,
+      "beacon_confidence": 0.99,
+      "detection_algorithm": "Autocorrelation analysis on inter-connection intervals with chi-square test for periodicity",
+      "verdict": "Confirmed C2 beacon — periodic connection pattern inconsistent with human-initiated traffic, consistent with Cobalt Strike default beacon profile"
+    },
+    "high_entropy_dns_subdomains": [
+      {
+        "timestamp": "2022-11-12T08:22:44+05:30",
+        "query": "a3f9k2m7.update.microsofft.com",
+        "entropy": 3.82,
+        "purpose": "DNS A record lookup for data staging subdomain — Cobalt Strike DNS staging fallback channel"
+      },
+      {
+        "timestamp": "2022-11-12T08:22:45+05:30",
+        "query": "x9q1r5t8.update.microsofft.com",
+        "entropy": 3.91,
+        "purpose": "DNS TXT record — encoded command channel via DNS"
+      },
+      {
+        "timestamp": "2022-11-12T08:22:46+05:30",
+        "query": "p4w8n2s6.update.microsofft.com",
+        "entropy": 3.78,
+        "purpose": "DNS A record — agent heartbeat via DNS"
+      }
+    ],
+    "exfiltration_summary": {
+      "start_time": "2022-11-12T09:00:00+05:30",
+      "end_time": "2022-11-12T15:00:00+05:30",
+      "total_bytes_exfiltrated": 2469606195,
+      "total_bytes_exfiltrated_human": "2.3 GB",
+      "method": "HTTPS POST to 185.220.101.47:443",
+      "data_content": "Encrypted 7z archives split into 50MB chunks — patient records staged on Day 7",
+      "average_chunk_size_mb": 50,
+      "total_chunks": 47
+    },
+    "firewall_rule_added": {
+      "timestamp": "2022-11-12T08:00:55+05:30",
+      "command": "netsh advfirewall firewall add rule name='Windows Update Helper' dir=out action=allow protocol=TCP remoteip=185.220.101.47 remoteport=443",
+      "effect": "Explicit allow rule for Tor exit node — ensures C2 connectivity even if default outbound rules are tightened",
+      "anomaly": "Firewall rule added by SYSTEM before C2 check-in — preparatory step, indicates pre-planned deployment"
+    },
+    "anomaly_signals": [
+      "beacon_pattern_confirmed: 4 consecutive connections with 300s±45s intervals — statistical beacon detection",
+      "dga_subdomains: 3 high-entropy subdomains generated with Shannon entropy >3.7 — DGA-like pattern",
+      "2_3gb_exfil: 2.3GB exfiltrated over HTTPS in 6 hours — large data loss event",
+      "firewall_self_modification: host added its own outbound firewall rule — self-modifying host security policy"
+    ],
+    "baseline_deviation_score": 0.99,
+    "ground_truth_note": "MALICIOUS: The full C2 picture. Five beacon intervals (300, 312, 315, 317, 317 seconds) have a mean of 312.2s with std dev 7.1s — this is statistically indistinguishable from a Cobalt Strike beacon with sleep=300, jitter=15%. The DGA-like subdomains confirm Cobalt Strike's DNS fallback channel is active. The 2.3GB exfiltration over 6 hours via HTTPS POST represents the patient records being sent to attacker infrastructure. The firewall rule ensures connectivity even after network policy changes. Detection at this stage (Day 12) means 10 days remain before ransomware deployment — full containment still possible."
+  }
+]

@@ -1,0 +1,127 @@
+{
+  "autopsy_id": "auto_cbse_2026_cached",
+  "incident_id": "cbse_2026",
+  "incident_name": "CBSE Board Exam Breach 2026",
+  "run_timestamp": "2026-07-04T12:05:00Z",
+  "mode": "RETROACTIVE",
+  "dwell_time_days": 12,
+  "earliest_detectable_signal": "2026-03-02T11:33:14+05:30",
+  "prevention_window_days": 12,
+  "retroactive_alerts": [
+    {
+      "alert_id": "alert_cbse_001",
+      "timestamp_absolute": "2026-03-02T11:33:14Z",
+      "time_before_incident": "T-12 days",
+      "days_before_incident": 12,
+      "confidence": 0.85,
+      "alert_type": "Spearphishing Delivery",
+      "mitre_technique_id": "T1566.002",
+      "description": "Credential harvesting phishing link sent from cbse-results.in (registered 8 days prior) targeting CBSE exam paper administrators.",
+      "evidence": [
+        "Domain age: 8 days",
+        "Target account: exam_admin_pankaj"
+      ],
+      "recommended_action": "Block sender domain at gateway, reset credentials for Pankaj, force FIDO2 authentication.",
+      "would_have_prevented_breach": true,
+      "containment_action": "Reset exam admin password and block domain cbse-results.in."
+    },
+    {
+      "alert_id": "alert_cbse_002",
+      "timestamp_absolute": "2026-03-02T11:52:08Z",
+      "time_before_incident": "T-12 days",
+      "days_before_incident": 12,
+      "confidence": 0.90,
+      "alert_type": "Exam Paper Cloud Storage Bulk Access",
+      "mitre_technique_id": "T1530",
+      "description": "Stolen credentials used to bulk download Class 12 board exam papers in 47 seconds to Netherlands IP 45.142.212.100.",
+      "evidence": [
+        "10 exam papers downloaded",
+        "Relayed IP: 45.142.212.100 (Netherlands)"
+      ],
+      "recommended_action": "Terminate hijacked web session, revoke exam paper access tokens, enable IP geo-fencing for cloud administration.",
+      "would_have_prevented_breach": true,
+      "containment_action": "Terminate hijacked session and lock cloud bucket."
+    }
+  ],
+  "ttp_attributions": [
+    {
+      "technique_id": "T1566.002",
+      "technique_name": "Spearphishing Link",
+      "tactic": "Initial Access",
+      "kill_chain_stage": 1,
+      "confidence": 0.85,
+      "matching_behaviors": ["Lookalike domain email forwarding link"],
+      "evidence_events": ["evt_cbse_001"]
+    },
+    {
+      "technique_id": "T1530",
+      "technique_name": "Data from Cloud Storage",
+      "tactic": "Collection",
+      "kill_chain_stage": 6,
+      "confidence": 0.90,
+      "matching_behaviors": ["Rapid cloud object resource download"],
+      "evidence_events": ["evt_cbse_002"]
+    }
+  ],
+  "actor_attribution": {
+    "actor_name": "APT41",
+    "actor_id": "apt41",
+    "confidence": 0.88,
+    "ttp_overlap_count": 3,
+    "campaign_match": "Operation Exam Leak",
+    "predicted_next_ttps": ["T1486"],
+    "recommended_defensive_actions": [
+      "Audit cloud storage access logs",
+      "Enforce MFA across all administrative portal logins",
+      "Implement outbound proxy filtering on admin servers"
+    ]
+  },
+  "playbook_executions": [
+    {
+      "execution_id": "playbook_exec_cbse_01",
+      "playbook_name": "Cloud Storage Lockout",
+      "triggered_by_alert_id": "alert_cbse_002",
+      "blast_radius": "LOW",
+      "requires_approval": false,
+      "actions": [
+        {
+          "action_type": "REVOKE_CRED",
+          "target_entity": "exam_admin_pankaj",
+          "parameters": {"force_sign_out": true},
+          "status": "SUCCESS",
+          "timestamp": "2026-03-02T12:00:00Z",
+          "reversible": false,
+          "audit_log_entry": "Hijacked credentials disabled immediately."
+        }
+      ],
+      "status": "EXECUTED",
+      "audit_trail": []
+    }
+  ],
+  "kill_chain_coverage": {
+    "Initial Access": true,
+    "Execution": false,
+    "Persistence": true,
+    "Privilege Escalation": false,
+    "Defense Evasion": false,
+    "Credential Access": true,
+    "Discovery": false,
+    "Lateral Movement": false,
+    "Collection": true,
+    "Command and Control": true,
+    "Exfiltration": false,
+    "Impact": false
+  },
+  "graph_nodes": [
+    {"id": "CBSE-EXAM-PORTAL-01", "name": "CBSE Admin Exam Portal", "type": "HOST", "criticality": "HIGH", "is_compromised": true, "val": 10},
+    {"id": "45.142.212.100", "name": "Attacker Proxy IP", "type": "IP", "criticality": "HIGH", "is_compromised": true, "val": 8},
+    {"id": "exam_admin_pankaj", "name": "exam_admin_pankaj", "type": "ACCOUNT", "criticality": "HIGH", "is_compromised": true, "val": 8}
+  ],
+  "graph_edges": [
+    {"source": "CBSE-EXAM-PORTAL-01", "target": "exam_admin_pankaj", "type": "AUTHENTICATED_AS"},
+    {"source": "45.142.212.100", "target": "CBSE-EXAM-PORTAL-01", "type": "COMMUNICATED_WITH"}
+  ],
+  "audit_trail": [
+    {"timestamp": "2026-07-04T12:05:00Z", "action": "CBSE Autopsy simulation initialized", "operator": "SYSTEM"}
+  ]
+}

@@ -1,0 +1,110 @@
+[
+  {
+    "event_id": "4688",
+    "sequence": 1,
+    "timestamp": "2022-11-07T23:45:02+05:30",
+    "host": "AIIMS-DC-01",
+    "account": "SYSTEM",
+    "process_name": "7z.exe",
+    "process_id": "0x4f1a",
+    "parent_process_name": "MicrosoftEdgeUpdateTaskMachineUA",
+    "parent_process_id": "0x4e09",
+    "command_line": "7z.exe a -p@dm1n2022 -mhe=on C:\\Windows\\Temp\\~logs\\backup_nov07.7z \\\\AIIMS-FILE-SRV-02\\patients\\ -r -mx=1",
+    "working_directory": "C:\\Windows\\Temp\\~logs\\",
+    "process_integrity_level": "System",
+    "mitre_technique": "T1560.001",
+    "mitre_technique_name": "Archive Collected Data: Archive via Utility",
+    "anomaly_signals": [
+      "7zip_from_persistence: 7z.exe spawned by the malicious scheduled task (MicrosoftEdgeUpdateTaskMachineUA) established on Day 3",
+      "password_protected_archive: -p@dm1n2022 creates encrypted archive — blocks forensic inspection without password",
+      "encrypt_header: -mhe=on also encrypts archive headers — even filenames hidden from analysis",
+      "patient_data_target: source is \\\\AIIMS-FILE-SRV-02\\patients\\ — directly targeting patient records",
+      "staging_to_temp: C:\\Windows\\Temp\\~logs\\ uses tilde prefix to mimic Windows temp/logs — evasion technique",
+      "late_night_execution: 23:45 IST — off-hours execution when monitoring staff reduced",
+      "recursive_flag: -r flag means ALL subdirectories recursively — complete patient database exfiltration"
+    ],
+    "staging_path": "C:\\Windows\\Temp\\~logs\\backup_nov07.7z",
+    "estimated_data_volume_gb": 47.3,
+    "baseline_deviation_score": 0.94,
+    "ground_truth_note": "MALICIOUS: The attacker is archiving the entire patient records file share. The command reveals the attacker's sophistication: (1) password-protected with encrypted headers so incident responders can't read the archive without the password '@dm1n2022', (2) recursive flag captures all nested directories, (3) staging to C:\\Windows\\Temp\\~logs\\ uses a tilde-prefixed folder name mimicking system temp folders. Most critically, 7z.exe is spawned BY the malicious scheduled task created on Day 3 — the forensic chain is clear. This event, if detected, would have revealed the Day 3 persistence mechanism and enabled full rollback."
+  },
+  {
+    "event_id": "4663",
+    "sequence": 2,
+    "timestamp": "2022-11-07T23:45:15+05:30",
+    "host": "AIIMS-DC-01",
+    "account": "SYSTEM",
+    "event_type": "file_write_bulk",
+    "object_type": "File",
+    "object_name": "C:\\Windows\\Temp\\~logs\\backup_nov07.7z",
+    "access_mask": "0x40010",
+    "handle_id": "0x3f8",
+    "process_name": "7z.exe",
+    "write_statistics": {
+      "start_time": "2022-11-07T23:45:15+05:30",
+      "end_time": "2022-11-08T02:52:33+05:30",
+      "duration_hours": 3.12,
+      "total_bytes_written": 50812641280,
+      "total_bytes_written_human": "47.3 GB",
+      "peak_write_rate_mbps": 48.2,
+      "average_write_rate_mbps": 40.6,
+      "total_write_operations": 1847392
+    },
+    "anomaly_signals": [
+      "massive_write: 47.3GB written to single file — 100x larger than any baseline write operation to Temp directory",
+      "sustained_3h_write: consistent write rate for 3+ hours — automated bulk operation",
+      "temp_directory_staging: large data accumulation in Temp — staging for exfiltration",
+      "write_rate_spike: 40-48 MB/s sustained — saturates local storage and creates detectable I/O pattern",
+      "no_legitimate_reason: no business process writes 47GB encrypted archives to Windows\\Temp at midnight"
+    ],
+    "baseline_deviation_score": 0.97,
+    "ground_truth_note": "MALICIOUS: 47.3GB written to a single encrypted 7z file over 3 hours at midnight. This is the data collection phase — the attacker has compressed 47GB of patient records (AIIMS treats ~3500+ patients daily, 30 years of records = enormous PII dataset). The 3-hour write window (23:45 to 02:52) combined with the 40+ MB/s sustained write rate would be visible in storage I/O metrics on any SIEM with endpoint telemetry. This represents complete patient database exfiltration preparation."
+  },
+  {
+    "event_id": "4670",
+    "sequence": 3,
+    "timestamp": "2022-11-08T02:53:01+05:30",
+    "host": "AIIMS-DC-01",
+    "account": "SYSTEM",
+    "event_type": "permissions_changed",
+    "object_type": "Directory",
+    "object_name": "C:\\Windows\\Temp\\~logs\\",
+    "original_permissions": "Everyone: Read/Write, SYSTEM: Full Control",
+    "new_permissions": "SYSTEM: Full Control only — all other ACEs removed",
+    "process_name": "icacls.exe",
+    "command_line": "icacls C:\\Windows\\Temp\\~logs\\ /inheritance:r /grant:r SYSTEM:F /deny *S-1-1-0:(OI)(CI)(RX)",
+    "anomaly_signals": [
+      "restrictive_acl: denying Everyone (S-1-1-0) from the staging directory — prevents incident responders from reading archive",
+      "post_write_lockdown: permissions changed immediately after 7z.exe completes — deliberate cover-your-tracks sequence",
+      "icacls_by_system: SYSTEM account directly manipulating ACLs via command line is highly anomalous",
+      "evidence_protection: attacker protecting staged data from discovery"
+    ],
+    "baseline_deviation_score": 0.92,
+    "ground_truth_note": "MALICIOUS: Immediately after the 47GB archive completes, the attacker restricts directory permissions using icacls. The command denies Read/Execute to Everyone (S-1-1-0) and grants Full Control only to SYSTEM — meaning even domain admins cannot browse the staging directory without SYSTEM-level tools. This is a deliberate anti-forensics step: if a sysadmin browses C:\\Windows\\Temp\\, they'll get 'Access Denied' on the ~logs folder, potentially dismissing it as a system folder. This technique buys the attacker time before exfiltration."
+  },
+  {
+    "event_id": "4688",
+    "sequence": 4,
+    "timestamp": "2022-11-08T03:01:14+05:30",
+    "host": "AIIMS-DC-01",
+    "account": "SYSTEM",
+    "process_name": "vssadmin.exe",
+    "process_id": "0x5a2b",
+    "parent_process_name": "cmd.exe",
+    "parent_process_id": "0x5910",
+    "command_line": "vssadmin delete shadows /all /quiet",
+    "process_integrity_level": "System",
+    "mitre_technique": "T1490",
+    "mitre_technique_name": "Inhibit System Recovery",
+    "anomaly_signals": [
+      "shadow_copy_deletion: destroys all Volume Shadow Copies — eliminates file recovery options",
+      "quiet_flag: /quiet suppresses confirmation dialogs — automated silent destruction",
+      "pre_exfil_cleanup: executed after data staging — attacker eliminating recovery options before exfiltrating data",
+      "vssadmin_by_system: VSS admin operations by SYSTEM from cmd.exe chain is anomalous",
+      "irreversible_action: shadow copy deletion is irreversible — data cannot be recovered without external backup",
+      "ransomware_precursor: VSS deletion is near-universal in ransomware deployment playbooks"
+    ],
+    "baseline_deviation_score": 0.99,
+    "ground_truth_note": "MALICIOUS: vssadmin delete shadows /all /quiet destroys ALL Windows Volume Shadow Copies — the primary local recovery mechanism for Windows servers. This action is irreversible and completely eliminates in-place file recovery options. Crucially, this occurs on Day 7/8 — 15 days before the ransomware deploys. The attacker is methodically eliminating recovery options in advance. This single event, detected by EDR, would have been a 100% confidence alert — there is NO legitimate operational reason to silently delete all shadow copies on a domain controller. This event alone should have triggered an automated incident response."
+  }
+]

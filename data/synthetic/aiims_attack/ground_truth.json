@@ -1,0 +1,211 @@
+{
+  "incident_name": "AIIMS Delhi Ransomware 2022",
+  "incident_codename": "OPERATION_DARK_WARD",
+  "actual_discovery_date": "2022-11-22",
+  "actual_discovery_time": "2022-11-22T07:00:00+05:30",
+  "earliest_detectable_signal": "2022-11-01",
+  "earliest_detectable_signal_time": "2022-11-01T02:14:33+05:30",
+  "high_confidence_signal": "2022-11-03",
+  "high_confidence_signal_time": "2022-11-03T14:47:33+05:30",
+  "last_containment_window": "2022-11-12",
+  "last_containment_window_time": "2022-11-12T08:01:04+05:30",
+  "total_dwell_time_days": 22,
+  "prevention_window_days": 19,
+  "minimum_detection_lag_hours": 4,
+
+  "detection_opportunities": [
+    {
+      "day": 1,
+      "date": "2022-11-01",
+      "time": "02:14:33+05:30",
+      "signal": "Off-hours service account logon from unknown source IP",
+      "technique": "T1078",
+      "technique_name": "Valid Accounts",
+      "expected_confidence": 0.73,
+      "detection_type": "behavioral_anomaly",
+      "detection_rule": "Service account logon outside business hours (09:00-18:00) from IP not in baseline",
+      "false_positive_risk": "low",
+      "analyst_action_required": "Investigate svc_backup$ logon source 10.0.4.47 — verify if scheduled task or authorized change",
+      "containment_action": "Disable svc_backup$ account, force password reset, investigate 10.0.4.47",
+      "days_before_ransomware": 21
+    },
+    {
+      "day": 3,
+      "date": "2022-11-03",
+      "time": "14:22:11+05:30",
+      "signal": "SMB subnet sweep from clinical server + Domain Admin enumeration on DC",
+      "technique": "T1021.002",
+      "technique_name": "SMB/Windows Admin Shares",
+      "expected_confidence": 0.91,
+      "detection_type": "network_behavioral + process_anomaly",
+      "detection_rule": "5 outbound SMB connections in 12s from single host with no baseline SMB history; net user /domain on DC from service account",
+      "false_positive_risk": "very_low",
+      "analyst_action_required": "Immediate — isolate AIIMS-PATIENT-MGMT-01, disable svc_backup$ across all systems, audit DC for scheduled tasks",
+      "containment_action": "Network isolate PATIENT-MGMT-01, remove malicious scheduled task 'MicrosoftEdgeUpdateTaskMachineUA', disable svc_backup$",
+      "days_before_ransomware": 19,
+      "forensic_pivots": [
+        "Check who created scheduled task MicrosoftEdgeUpdateTaskMachineUA on AIIMS-DC-01",
+        "Analyze base64 payload in task arguments — decodes to download from 185.220.101.47",
+        "Review all admin$ share accesses in past 48h"
+      ]
+    },
+    {
+      "day": 7,
+      "date": "2022-11-07",
+      "time": "23:45:02+05:30",
+      "signal": "47GB archive written to Windows\\Temp at midnight + VSS deletion",
+      "technique": "T1560.001",
+      "technique_name": "Archive Collected Data",
+      "expected_confidence": 0.97,
+      "detection_type": "file_system + EDR",
+      "detection_rule": "7z.exe spawned by non-standard parent + bulk write >1GB to Temp directory + vssadmin delete shadows",
+      "false_positive_risk": "negligible",
+      "analyst_action_required": "CRITICAL — 47GB patient data staged for exfil, shadow copies deleted, immediate IR team response required",
+      "containment_action": "Isolate AIIMS-DC-01, preserve forensic image of C:\\Windows\\Temp\\~logs\\, block all outbound from DC, incident declared",
+      "days_before_ransomware": 15
+    },
+    {
+      "day": 12,
+      "date": "2022-11-12",
+      "time": "08:01:04+05:30",
+      "signal": "Cobalt Strike C2 beacon to Tor exit node via typosquat domain",
+      "technique": "T1071.001",
+      "technique_name": "Application Layer Protocol: Web Protocols",
+      "expected_confidence": 0.99,
+      "detection_type": "network_threat_intel + beacon_analysis",
+      "detection_rule": "DNS query for typosquat domain resolving to known Tor exit node + periodic HTTPS from DC with JA3 matching Cobalt Strike + 2.3GB exfil",
+      "false_positive_risk": "zero",
+      "analyst_action_required": "MANDATORY ESCALATION — active Cobalt Strike C2, data exfiltration confirmed, ransomware deployment imminent",
+      "containment_action": "Full network isolation of all compromised hosts, emergency AD recovery, block 185.220.101.47 at perimeter, notify CERT-In under NCIIPC mandate",
+      "days_before_ransomware": 10,
+      "threat_intel_iocs": {
+        "c2_ip": "185.220.101.47",
+        "c2_domain": "update.microsofft.com",
+        "ja3_hash": "a0e9f5d64349fb13191bc781f81f42e1",
+        "beacon_interval": "300s±45s"
+      }
+    }
+  ],
+
+  "ttps_used": [
+    {
+      "technique_id": "T1078",
+      "technique_name": "Valid Accounts",
+      "date_first_observed": "2022-11-01",
+      "description": "svc_backup$ credentials used for initial access — likely obtained via credential stuffing or password spray against AIIMS VPN/backup management portal",
+      "kill_chain_phase": "Initial Access"
+    },
+    {
+      "technique_id": "T1021.002",
+      "technique_name": "Remote Services: SMB/Windows Admin Shares",
+      "date_first_observed": "2022-11-03",
+      "description": "SMB sweep from AIIMS-PATIENT-MGMT-01, lateral movement to AIIMS-DC-01 using harvested credentials",
+      "kill_chain_phase": "Lateral Movement"
+    },
+    {
+      "technique_id": "T1087.002",
+      "technique_name": "Account Discovery: Domain Account",
+      "date_first_observed": "2022-11-03",
+      "description": "net user /domain + whoami /all executed on DC for full domain enumeration",
+      "kill_chain_phase": "Discovery"
+    },
+    {
+      "technique_id": "T1053.005",
+      "technique_name": "Scheduled Task/Job: Scheduled Task",
+      "date_first_observed": "2022-11-03",
+      "description": "Malicious scheduled task 'MicrosoftEdgeUpdateTaskMachineUA' created on DC for persistence with base64 PowerShell payload",
+      "kill_chain_phase": "Persistence"
+    },
+    {
+      "technique_id": "T1560.001",
+      "technique_name": "Archive Collected Data: Archive via Utility",
+      "date_first_observed": "2022-11-07",
+      "description": "7z.exe used to create 47.3GB password-protected archive of patient records in C:\\Windows\\Temp\\~logs\\",
+      "kill_chain_phase": "Collection"
+    },
+    {
+      "technique_id": "T1490",
+      "technique_name": "Inhibit System Recovery",
+      "date_first_observed": "2022-11-08",
+      "description": "vssadmin delete shadows /all /quiet on Day 8; bcdedit recovery disable and WBEngine service stopped on Day 22",
+      "kill_chain_phase": "Impact"
+    },
+    {
+      "technique_id": "T1071.001",
+      "technique_name": "Application Layer Protocol: Web Protocols",
+      "date_first_observed": "2022-11-12",
+      "description": "Cobalt Strike HTTPS beacon to 185.220.101.47 (Tor exit) via update.microsofft.com typosquat",
+      "kill_chain_phase": "Command and Control"
+    },
+    {
+      "technique_id": "T1048",
+      "technique_name": "Exfiltration Over Alternative Protocol",
+      "date_first_observed": "2022-11-12",
+      "description": "2.3GB patient data exfiltrated via HTTPS POST to Cobalt Strike C2 in 50MB chunks",
+      "kill_chain_phase": "Exfiltration"
+    },
+    {
+      "technique_id": "T1486",
+      "technique_name": "Data Encrypted for Impact",
+      "date_first_observed": "2022-11-22",
+      "description": "284,712 files encrypted with AES-256-CTR + RSA-4096 key wrapping, '.AIIMS_LOCKED' extension appended",
+      "kill_chain_phase": "Impact"
+    },
+    {
+      "technique_id": "T1531",
+      "technique_name": "Account Access Removal",
+      "date_first_observed": "2022-11-22",
+      "description": "All 5 domain admin accounts simultaneously locked via automated bad-password spray from DC",
+      "kill_chain_phase": "Impact"
+    }
+  ],
+
+  "likely_actor": {
+    "attribution": "Suspected nation-state affiliated threat actor",
+    "confidence": "medium",
+    "notes": "TTPs consistent with APT41 playbook: dual espionage (data exfiltration) + financial extortion (ransomware), Cobalt Strike usage, Tor exit node C2, healthcare sector targeting",
+    "overlapping_iocs": [
+      "185.220.101.47 used in 3 prior APT41-attributed incidents (CERT-In CI-21-2024)",
+      "Cobalt Strike JA3 hash a0e9f5d64349fb13191bc781f81f42e1 seen in APT41 India-targeted campaigns Q3 2022",
+      ".AIIMS_LOCKED extension customization indicates targeted, not commodity, operation"
+    ],
+    "mitre_group": "G0096",
+    "group_name": "APT41"
+  },
+
+  "impact": {
+    "systems_encrypted": 126,
+    "patient_records_affected": 284712,
+    "estimated_downtime_days": 15,
+    "services_disrupted": [
+      "Online patient registration (completely offline for 15 days)",
+      "Hospital Information System — patient record access",
+      "Lab results management",
+      "Radiology image access (PACS)",
+      "Pharmacy management system",
+      "Blood bank management",
+      "Online appointment booking",
+      "Telemedicine services"
+    ],
+    "patient_care_impact": "Critical — AIIMS returned to paper-based records for 15 days, elective surgeries cancelled, emergency cases handled manually",
+    "data_exfiltrated_gb": 2.3,
+    "ransom_demanded_usd": 6500000,
+    "ransom_paid": false,
+    "recovery_cost_estimated_crore_inr": 50,
+    "regulatory_notifications_required": ["CERT-In (mandatory within 6h under NCIIPC mandate)", "MoHFW", "National Health Authority"]
+  },
+
+  "retroactive_detection_summary": {
+    "engine": "Attack Chain Autopsy Engine v1.0",
+    "scenario": "AIIMS Delhi Ransomware 2022 — Retroactive Replay",
+    "would_have_detected_day": 1,
+    "would_have_high_confidence_day": 3,
+    "would_have_contained_day": 12,
+    "actual_discovery_day": 22,
+    "days_saved": 19,
+    "outcome_if_detected_day_1": "Attacker stopped at initial access — svc_backup$ disabled, no lateral movement, no data exfiltration, no ransomware",
+    "outcome_if_detected_day_3": "Persistence mechanism removed, lateral movement stopped, 47GB staging never occurs, domain not compromised",
+    "outcome_if_detected_day_12": "C2 severed, exfiltration blocked, 10 days to full remediation before ransomware deadline",
+    "outcome_actual_day_22": "Full ransomware deployment, 284,712 patient records encrypted, 15-day clinical disruption, $6.5M ransom demand"
+  }
+}

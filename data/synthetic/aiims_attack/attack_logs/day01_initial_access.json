@@ -1,0 +1,71 @@
+[
+  {
+    "event_id": "4624",
+    "sequence": 1,
+    "timestamp": "2022-11-01T02:14:33+05:30",
+    "host": "AIIMS-FILE-SRV-02",
+    "account": "svc_backup$",
+    "logon_type": 3,
+    "source_ip": "10.0.4.47",
+    "dest_ip": "10.0.4.50",
+    "auth_package": "NTLM",
+    "workstation_name": "UNKNOWN-HOST",
+    "session_id": "0x9a1f01",
+    "logon_process": "NtLmSsp",
+    "elevation_token": "Yes",
+    "mitre_technique": "T1078",
+    "mitre_technique_name": "Valid Accounts",
+    "anomaly_signals": [
+      "off_hours_access: 02:14 IST — 0 prior occurrences at this hour in 30-day baseline",
+      "novel_source_ip: 10.0.4.47 never seen for svc_backup$ in baseline (baseline source: 10.0.8.20 only)",
+      "wrong_subnet: clinical subnet 10.0.4.x — svc_backup$ should only operate from admin subnet 10.0.8.x",
+      "logon_type_mismatch: logon_type 3 (network) for service account — baseline shows only logon_type 5 (service)"
+    ],
+    "baseline_deviation_score": 0.73,
+    "ground_truth_note": "MALICIOUS: Attacker has obtained svc_backup$ credentials (likely via password spray or credential stuffing against the backup management portal). 2:14 AM logon from 10.0.4.47 (compromised clinical workstation used as pivot) is 100% outside the established baseline of 09:00-18:00 weekday logons from 10.0.8.20. This is the initial foothold — attacker authenticating as a privileged service account from an unexpected source IP and subnet."
+  },
+  {
+    "event_id": "5140",
+    "sequence": 2,
+    "timestamp": "2022-11-01T02:15:11+05:30",
+    "host": "AIIMS-FILE-SRV-02",
+    "account": "svc_backup$",
+    "share_name": "\\\\AIIMS-FILE-SRV-02\\admin$",
+    "share_local_path": "C:\\Windows",
+    "access_mask": "0x12019f",
+    "source_ip": "10.0.4.47",
+    "source_port": 52441,
+    "mitre_technique": "T1021.002",
+    "mitre_technique_name": "Remote Services: SMB/Windows Admin Shares",
+    "anomaly_signals": [
+      "admin_share_access: admin$ share accessed — no baseline entries for svc_backup$ accessing admin$",
+      "access_mask_write: mask 0x12019f includes write permission — backup accounts should be read-only",
+      "timestamp_continuation: 38 seconds after anomalous logon — immediate post-auth reconnaissance"
+    ],
+    "baseline_deviation_score": 0.81,
+    "ground_truth_note": "MALICIOUS: Attacker immediately accesses admin$ share (C:\\Windows) after authenticating. Admin$ access requires administrative privileges. This confirms the svc_backup$ account has Domain Admin-equivalent rights that the attacker is now exploiting. No legitimate backup operations use the admin$ share at 2 AM — scheduled backups write to dedicated share \\AIIMS-FILE-SRV-02\\backup_jobs$."
+  },
+  {
+    "event_id": "4688",
+    "sequence": 3,
+    "timestamp": "2022-11-01T02:17:44+05:30",
+    "host": "AIIMS-FILE-SRV-02",
+    "account": "svc_backup$",
+    "process_name": "cmd.exe",
+    "process_id": "0x1a4c",
+    "parent_process_name": "services.exe",
+    "parent_process_id": "0x024c",
+    "command_line": "cmd.exe /c whoami && ipconfig /all && net group \"Domain Admins\" /domain",
+    "token_elevation_type": "TokenElevationTypeFull",
+    "mitre_technique": "T1059",
+    "mitre_technique_name": "Command and Scripting Interpreter",
+    "anomaly_signals": [
+      "unusual_parent: cmd.exe spawned by services.exe — svc_backup$ should spawn backup executables, not cmd.exe",
+      "recon_commands: whoami, ipconfig /all, net group — classic post-exploitation enumeration trifecta",
+      "domain_admins_query: querying Domain Admins group composition reveals attacker seeking escalation targets",
+      "full_token_elevation: TokenElevationTypeFull indicates account has full admin token — confirms over-privileged service account"
+    ],
+    "baseline_deviation_score": 0.91,
+    "ground_truth_note": "MALICIOUS: cmd.exe spawned by a service account at 2:17 AM running classic attacker enumeration commands. 'whoami && ipconfig /all && net group Domain Admins /domain' is textbook post-exploitation reconnaissance. No backup software in the AIIMS environment spawns interactive cmd.exe sessions. The attacker is mapping the domain structure before lateral movement. This is the clearest early indicator — a behavioral detection engine watching process ancestry and command-line arguments would flag this immediately."
+  }
+]

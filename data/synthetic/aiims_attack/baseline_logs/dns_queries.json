@@ -1,0 +1,262 @@
+[
+  {
+    "timestamp": "2022-10-03T08:58:12+05:30",
+    "source_ip": "10.0.8.10",
+    "query_domain": "internal.aiims.edu",
+    "query_type": "A",
+    "response_ip": "10.0.8.5",
+    "response_code": "NOERROR",
+    "ttl": 3600,
+    "notes": "Internal DNS resolution for AIIMS main domain — domain controller querying own zone"
+  },
+  {
+    "timestamp": "2022-10-03T09:04:22+05:30",
+    "source_ip": "10.0.4.112",
+    "query_domain": "his.aiims.edu",
+    "query_type": "A",
+    "response_ip": "10.0.8.22",
+    "response_code": "NOERROR",
+    "ttl": 3600,
+    "notes": "Clinical workstation resolving Hospital Information System — normal clinical operation"
+  },
+  {
+    "timestamp": "2022-10-03T10:11:44+05:30",
+    "source_ip": "10.0.12.55",
+    "query_domain": "pubmed.ncbi.nlm.nih.gov",
+    "query_type": "A",
+    "response_ip": "130.14.250.7",
+    "response_code": "NOERROR",
+    "ttl": 300,
+    "notes": "Research workstation querying PubMed — expected research activity"
+  },
+  {
+    "timestamp": "2022-10-03T11:30:08+05:30",
+    "source_ip": "10.0.12.67",
+    "query_domain": "who.int",
+    "query_type": "A",
+    "response_ip": "198.18.0.213",
+    "response_code": "NOERROR",
+    "ttl": 600,
+    "notes": "Research workstation accessing WHO database — standard medical research"
+  },
+  {
+    "timestamp": "2022-10-03T12:00:01+05:30",
+    "source_ip": "10.0.8.10",
+    "query_domain": "ntp1.aiims.edu",
+    "query_type": "A",
+    "response_ip": "10.0.8.3",
+    "response_code": "NOERROR",
+    "ttl": 86400,
+    "notes": "Domain controller NTP sync — internal time server query, regular 12-hour cadence"
+  },
+  {
+    "timestamp": "2022-10-04T09:22:11+05:30",
+    "source_ip": "10.0.4.89",
+    "query_domain": "his.aiims.edu",
+    "query_type": "A",
+    "response_ip": "10.0.8.22",
+    "response_code": "NOERROR",
+    "ttl": 3600,
+    "notes": "Clinician resolving HIS — morning workflow start"
+  },
+  {
+    "timestamp": "2022-10-04T10:45:33+05:30",
+    "source_ip": "10.0.8.45",
+    "query_domain": "windowsupdate.microsoft.com",
+    "query_type": "A",
+    "response_ip": "13.107.4.52",
+    "response_code": "NOERROR",
+    "ttl": 300,
+    "notes": "Admin workstation Windows Update check — routed via proxy, legitimate patch management"
+  },
+  {
+    "timestamp": "2022-10-05T08:00:00+05:30",
+    "source_ip": "10.0.8.20",
+    "query_domain": "backup.aiims.edu",
+    "query_type": "A",
+    "response_ip": "10.0.8.20",
+    "response_code": "NOERROR",
+    "ttl": 86400,
+    "notes": "Backup server self-resolution — service health check at startup"
+  },
+  {
+    "timestamp": "2022-10-05T10:12:04+05:30",
+    "source_ip": "10.0.12.55",
+    "query_domain": "clinicaltrials.gov",
+    "query_type": "A",
+    "response_ip": "34.196.72.29",
+    "response_code": "NOERROR",
+    "ttl": 300,
+    "notes": "Research workstation accessing clinical trials database — expected for medical research"
+  },
+  {
+    "timestamp": "2022-10-06T09:01:55+05:30",
+    "source_ip": "10.0.4.77",
+    "query_domain": "his.aiims.edu",
+    "query_type": "A",
+    "response_ip": "10.0.8.22",
+    "response_code": "NOERROR",
+    "ttl": 3600,
+    "notes": "Nursing station HIS resolution — shift start"
+  },
+  {
+    "timestamp": "2022-10-07T00:00:01+05:30",
+    "source_ip": "10.0.8.10",
+    "query_domain": "ntp1.aiims.edu",
+    "query_type": "A",
+    "response_ip": "10.0.8.3",
+    "response_code": "NOERROR",
+    "ttl": 86400,
+    "notes": "Midnight NTP sync — domain controller time synchronization, automated"
+  },
+  {
+    "timestamp": "2022-10-07T11:22:44+05:30",
+    "source_ip": "10.0.12.67",
+    "query_domain": "journals.plos.org",
+    "query_type": "A",
+    "response_ip": "209.85.233.201",
+    "response_code": "NOERROR",
+    "ttl": 300,
+    "notes": "Research workstation — PLoS journal access for medical literature"
+  },
+  {
+    "timestamp": "2022-10-10T09:05:33+05:30",
+    "source_ip": "10.0.4.112",
+    "query_domain": "his.aiims.edu",
+    "query_type": "A",
+    "response_ip": "10.0.8.22",
+    "response_code": "NOERROR",
+    "ttl": 3600,
+    "notes": "Monday morning HIS resolution — consistent pattern"
+  },
+  {
+    "timestamp": "2022-10-11T14:30:22+05:30",
+    "source_ip": "10.0.8.30",
+    "query_domain": "smtp.aiims.edu",
+    "query_type": "MX",
+    "response_ip": "10.0.8.25",
+    "response_code": "NOERROR",
+    "ttl": 7200,
+    "notes": "Admin host resolving internal mail server MX record — routine email operation"
+  },
+  {
+    "timestamp": "2022-10-12T09:10:01+05:30",
+    "source_ip": "10.0.4.88",
+    "query_domain": "his.aiims.edu",
+    "query_type": "A",
+    "response_ip": "10.0.8.22",
+    "response_code": "NOERROR",
+    "ttl": 3600,
+    "notes": "Nursing station daily HIS resolution"
+  },
+  {
+    "timestamp": "2022-10-14T00:00:01+05:30",
+    "source_ip": "10.0.8.10",
+    "query_domain": "ntp1.aiims.edu",
+    "query_type": "A",
+    "response_ip": "10.0.8.3",
+    "response_code": "NOERROR",
+    "ttl": 86400,
+    "notes": "Automated midnight NTP query — every 7 days deep sync from AD domain controller"
+  },
+  {
+    "timestamp": "2022-10-17T09:08:44+05:30",
+    "source_ip": "10.0.4.134",
+    "query_domain": "his.aiims.edu",
+    "query_type": "A",
+    "response_ip": "10.0.8.22",
+    "response_code": "NOERROR",
+    "ttl": 3600,
+    "notes": "Monday HIS resolution — consistent with weekly pattern"
+  },
+  {
+    "timestamp": "2022-10-18T11:44:22+05:30",
+    "source_ip": "10.0.12.55",
+    "query_domain": "www.icmr.gov.in",
+    "query_type": "A",
+    "response_ip": "164.100.15.100",
+    "response_code": "NOERROR",
+    "ttl": 300,
+    "notes": "Research workstation accessing ICMR (Indian Council of Medical Research) website — typical medical research"
+  },
+  {
+    "timestamp": "2022-10-19T09:03:11+05:30",
+    "source_ip": "10.0.4.77",
+    "query_domain": "his.aiims.edu",
+    "query_type": "A",
+    "response_ip": "10.0.8.22",
+    "response_code": "NOERROR",
+    "ttl": 3600,
+    "notes": "Nursing station HIS"
+  },
+  {
+    "timestamp": "2022-10-20T10:22:55+05:30",
+    "source_ip": "10.0.8.45",
+    "query_domain": "internal.aiims.edu",
+    "query_type": "A",
+    "response_ip": "10.0.8.5",
+    "response_code": "NOERROR",
+    "ttl": 3600,
+    "notes": "Admin workstation domain resolution"
+  },
+  {
+    "timestamp": "2022-10-21T00:00:01+05:30",
+    "source_ip": "10.0.8.10",
+    "query_domain": "ntp1.aiims.edu",
+    "query_type": "A",
+    "response_ip": "10.0.8.3",
+    "response_code": "NOERROR",
+    "ttl": 86400,
+    "notes": "Weekly midnight NTP sync"
+  },
+  {
+    "timestamp": "2022-10-24T09:12:33+05:30",
+    "source_ip": "10.0.4.201",
+    "query_domain": "his.aiims.edu",
+    "query_type": "A",
+    "response_ip": "10.0.8.22",
+    "response_code": "NOERROR",
+    "ttl": 3600,
+    "notes": "On-call workstation HIS access — clinical operations"
+  },
+  {
+    "timestamp": "2022-10-25T14:05:44+05:30",
+    "source_ip": "10.0.12.67",
+    "query_domain": "pubmed.ncbi.nlm.nih.gov",
+    "query_type": "A",
+    "response_ip": "130.14.250.7",
+    "response_code": "NOERROR",
+    "ttl": 300,
+    "notes": "PubMed access — research activity"
+  },
+  {
+    "timestamp": "2022-10-28T00:00:01+05:30",
+    "source_ip": "10.0.8.10",
+    "query_domain": "ntp1.aiims.edu",
+    "query_type": "A",
+    "response_ip": "10.0.8.3",
+    "response_code": "NOERROR",
+    "ttl": 86400,
+    "notes": "Weekly NTP sync"
+  },
+  {
+    "timestamp": "2022-10-31T09:01:22+05:30",
+    "source_ip": "10.0.4.112",
+    "query_domain": "his.aiims.edu",
+    "query_type": "A",
+    "response_ip": "10.0.8.22",
+    "response_code": "NOERROR",
+    "ttl": 3600,
+    "notes": "End-of-month, Monday morning HIS resolution — final baseline entry"
+  },
+  {
+    "timestamp": "2022-10-31T17:55:00+05:30",
+    "source_ip": "10.0.8.30",
+    "query_domain": "smtp.aiims.edu",
+    "query_type": "MX",
+    "response_ip": "10.0.8.25",
+    "response_code": "NOERROR",
+    "ttl": 7200,
+    "notes": "End-of-month email MX resolution — admin host"
+  }
+]

@@ -1,0 +1,83 @@
+# ═══════════════════════════════════════════════════════════════
+# Attack Chain Autopsy Engine — Python Backend Dependencies
+# Pinned for reproducibility. Python 3.11+ required.
+# ═══════════════════════════════════════════════════════════════
+
+# ── Web Framework ──────────────────────────────────────────────
+fastapi
+uvicorn[standard]
+python-multipart
+sse-starlette
+
+# ── LangChain / LangGraph Agent Framework ─────────────────────
+langchain
+langchain-core
+langchain-community
+langchain-anthropic
+langchain-openai
+langgraph
+langgraph-checkpoint
+
+# ── AI / Embeddings ────────────────────────────────────────────
+anthropic
+openai
+
+# ── Vector Store ───────────────────────────────────────────────
+chromadb
+sentence-transformers
+
+# ── Graph Database ─────────────────────────────────────────────
+neo4j
+
+# ── MITRE ATT&CK ───────────────────────────────────────────────
+mitreattack-python
+stix2
+
+# ── Data Validation / Serialization ────────────────────────────
+pydantic
+pydantic-settings
+
+# ── Async / HTTP ───────────────────────────────────────────────
+httpx
+aiofiles
+aiohttp
+
+# ── Database ───────────────────────────────────────────────────
+sqlalchemy
+aiosqlite
+alembic
+
+# ── Configuration ──────────────────────────────────────────────
+python-dotenv
+
+# ── Windows Event Log Parsing ──────────────────────────────────
+python-evtx
+
+# ── CLI / Logging ──────────────────────────────────────────────
+rich
+structlog
+loguru
+
+# ── Security / Hashing ─────────────────────────────────────────
+passlib[bcrypt]
+python-jose[cryptography]
+cryptography
+
+# ── Data Processing ────────────────────────────────────────────
+numpy
+pandas
+scipy
+
+# ── Testing ────────────────────────────────────────────────────
+pytest
+pytest-asyncio
+pytest-mock
+httpx
+respx
+
+# ── Utilities ──────────────────────────────────────────────────
+tenacity
+python-dateutil
+pytz
+ujson
+orjson

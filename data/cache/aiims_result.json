@@ -1,0 +1,185 @@
+{
+  "autopsy_id": "auto_aiims_2022_cached",
+  "incident_id": "aiims_2022",
+  "incident_name": "AIIMS Delhi Ransomware 2022",
+  "run_timestamp": "2026-07-04T12:00:00Z",
+  "mode": "RETROACTIVE",
+  "dwell_time_days": 22,
+  "earliest_detectable_signal": "2022-11-01T02:14:33+05:30",
+  "prevention_window_days": 19,
+  "retroactive_alerts": [
+    {
+      "alert_id": "alert_day01_001",
+      "timestamp_absolute": "2022-11-01T02:14:33Z",
+      "time_before_incident": "T-21 days",
+      "days_before_incident": 21,
+      "confidence": 0.73,
+      "alert_type": "Anomalous Authentication",
+      "mitre_technique_id": "T1078",
+      "description": "svc_backup$ off-hours logon from anomalous source 10.0.4.47 (clinical subnet) outside baseline 09:00-18:00 weekday hours.",
+      "evidence": [
+        "Event ID: 4624",
+        "Source IP: 10.0.4.47",
+        "Logon Type: 3 (Network)"
+      ],
+      "recommended_action": "Force password reset for svc_backup$, isolate source host 10.0.4.47, audit backup service permissions.",
+      "would_have_prevented_breach": true,
+      "containment_action": "Isolate pivot host and revoke service account session tokens."
+    },
+    {
+      "alert_id": "alert_day03_001",
+      "timestamp_absolute": "2022-11-03T14:22:11Z",
+      "time_before_incident": "T-19 days",
+      "days_before_incident": 19,
+      "confidence": 0.91,
+      "alert_type": "SMB Lateral Movement Sweep",
+      "mitre_technique_id": "T1021.002",
+      "description": "SMB port 445 sweep from clinical server AIIMS-PATIENT-MGMT-01 targeting multiple subnets including DC-01. Never seen in baseline.",
+      "evidence": [
+        "5 outbound SMB connections in 12 seconds",
+        "Target DC IP: 10.0.8.10"
+      ],
+      "recommended_action": "Isolate AIIMS-PATIENT-MGMT-01, block outbound SMB from clinical subnets to Domain Controllers.",
+      "would_have_prevented_breach": true,
+      "containment_action": "Isolate AIIMS-PATIENT-MGMT-01 immediately."
+    },
+    {
+      "alert_id": "alert_day07_001",
+      "timestamp_absolute": "2022-11-07T23:45:02Z",
+      "time_before_incident": "T-15 days",
+      "days_before_incident": 15,
+      "confidence": 0.94,
+      "alert_type": "Data Staging & Recovery Inhibition",
+      "mitre_technique_id": "T1560.001",
+      "description": "47.3GB staged using password-protected 7z.exe archive under C:\\Windows\\Temp\\~logs\\, followed by vssadmin delete shadows.",
+      "evidence": [
+        "Process: 7z.exe spawned by Edge masquerade task",
+        "vssadmin delete shadows /all /quiet command executed"
+      ],
+      "recommended_action": "Declare critical incident, isolate Domain Controller, lock down local admin group policies, restrict shadow copy deletions.",
+      "would_have_prevented_breach": true,
+      "containment_action": "Declare Incident and lock down Domain Controller directory modification privileges."
+    },
+    {
+      "alert_id": "alert_day12_001",
+      "timestamp_absolute": "2022-11-12T08:01:04Z",
+      "time_before_incident": "T-10 days",
+      "days_before_incident": 10,
+      "confidence": 0.99,
+      "alert_type": "Command and Control Beacon",
+      "mitre_technique_id": "T1071.001",
+      "description": "Cobalt Strike HTTPS beacon to known Tor exit node 185.220.101.47 via typosquat update.microsofft.com. Standard 300s jitter pattern.",
+      "evidence": [
+        "DNS: update.microsofft.com",
+        "Destination: 185.220.101.47:443",
+        "JA3 CS Beacon signature matched"
+      ],
+      "recommended_action": "Isolate all domain controllers, deploy backup recovery keys, enforce geo-blocking, block C2 IPs at firewall perimeter.",
+      "would_have_prevented_breach": true,
+      "containment_action": "Perform emergency Domain Controller isolation."
+    }
+  ],
+  "ttp_attributions": [
+    {
+      "technique_id": "T1078",
+      "technique_name": "Valid Accounts",
+      "tactic": "Initial Access",
+      "kill_chain_stage": 1,
+      "confidence": 0.73,
+      "matching_behaviors": ["Anomalous off-hours service account activity"],
+      "evidence_events": ["evt_day01_001"]
+    },
+    {
+      "technique_id": "T1021.002",
+      "technique_name": "SMB/Windows Admin Shares",
+      "tactic": "Lateral Movement",
+      "kill_chain_stage": 4,
+      "confidence": 0.91,
+      "matching_behaviors": ["Port 445 sweeping to internal subnets"],
+      "evidence_events": ["evt_day03_001"]
+    },
+    {
+      "technique_id": "T1560.001",
+      "technique_name": "Archive Collected Data",
+      "tactic": "Collection",
+      "kill_chain_stage": 6,
+      "confidence": 0.94,
+      "matching_behaviors": ["Bulk file compression in temporary directory"],
+      "evidence_events": ["evt_day07_001"]
+    },
+    {
+      "technique_id": "T1071.001",
+      "technique_name": "Web Protocols",
+      "tactic": "Command and Control",
+      "kill_chain_stage": 7,
+      "confidence": 0.99,
+      "matching_behaviors": ["Tor exit IP connection", "Cobalt Strike beacon JA3 pattern"],
+      "evidence_events": ["evt_day12_001"]
+    }
+  ],
+  "actor_attribution": {
+    "actor_name": "APT41",
+    "actor_id": "apt41",
+    "confidence": 0.92,
+    "ttp_overlap_count": 5,
+    "campaign_match": "Operation Dark Ward",
+    "predicted_next_ttps": ["T1486", "T1531"],
+    "recommended_defensive_actions": [
+      "Isolate clinical subnets immediately",
+      "Audit service accounts with domain admin rights",
+      "Implement application blocklisting for unauthorized archiving tools"
+    ]
+  },
+  "playbook_executions": [
+    {
+      "execution_id": "playbook_exec_aiims_01",
+      "playbook_name": "CNI Clinical Subnet Containment",
+      "triggered_by_alert_id": "alert_day03_001",
+      "blast_radius": "LOW",
+      "requires_approval": false,
+      "actions": [
+        {
+          "action_type": "ISOLATE_HOST",
+          "target_entity": "AIIMS-PATIENT-MGMT-01",
+          "parameters": {"method": "Null Route / V-LAN isolation"},
+          "status": "SUCCESS",
+          "timestamp": "2026-07-04T12:00:00Z",
+          "reversible": true,
+          "audit_log_entry": "Host isolated successfully to prevent propagation to Domain Controller."
+        }
+      ],
+      "status": "EXECUTED",
+      "audit_trail": []
+    }
+  ],
+  "kill_chain_coverage": {
+    "Initial Access": true,
+    "Execution": false,
+    "Persistence": true,
+    "Privilege Escalation": false,
+    "Defense Evasion": true,
+    "Credential Access": false,
+    "Discovery": true,
+    "Lateral Movement": true,
+    "Collection": true,
+    "Command and Control": true,
+    "Exfiltration": true,
+    "Impact": false
+  },
+  "graph_nodes": [
+    {"id": "AIIMS-DC-01", "name": "Active Directory Domain Controller", "type": "HOST", "criticality": "HIGH", "is_compromised": true, "val": 10},
+    {"id": "AIIMS-PATIENT-MGMT-01", "name": "Patient Management System", "type": "HOST", "criticality": "HIGH", "is_compromised": true, "val": 8},
+    {"id": "185.220.101.47", "name": "Tor exit (185.220.101.47)", "type": "IP", "criticality": "HIGH", "is_compromised": true, "val": 8},
+    {"id": "svc_backup$", "name": "svc_backup$", "type": "ACCOUNT", "criticality": "HIGH", "is_compromised": true, "val": 8}
+  ],
+  "graph_edges": [
+    {"source": "AIIMS-DC-01", "target": "svc_backup$", "type": "AUTHENTICATED_AS"},
+    {"source": "AIIMS-PATIENT-MGMT-01", "target": "AIIMS-DC-01", "type": "COMMUNICATED_WITH"},
+    {"source": "AIIMS-DC-01", "target": "185.220.101.47", "type": "COMMUNICATED_WITH"}
+  ],
+  "audit_trail": [
+    {"timestamp": "2026-07-04T12:00:00Z", "action": "Autopsy simulation initialized", "operator": "SYSTEM"},
+    {"timestamp": "2026-07-04T12:00:02Z", "action": "LogIngestionAgent finished processing 43 events", "operator": "LogIngestionAgent"},
+    {"timestamp": "2026-07-04T12:00:04Z", "action": "BehavioralBaselineAgent identified 4 high-deviation anomalies", "operator": "BehavioralBaselineAgent"}
+  ]
+}

