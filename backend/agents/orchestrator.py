@@ -168,10 +168,12 @@ class AttackChainOrchestrator:
     @staticmethod
     def _route_after_attribution(state: AutopsyState) -> str:
         """Route to retroactive or live response path."""
-        mode = (state.get("incident", {}) or {}).get("mode", "RETROACTIVE")
-        if hasattr(mode, "upper"):
-            mode = mode.upper()
-        return "retroactive" if mode == "RETROACTIVE" else "live"
+        incident = state.get("incident")
+        # IncidentInput is a Pydantic model — use attribute access, not .get()
+        if incident is None:
+            return "retroactive"
+        mode = incident.mode if hasattr(incident, "mode") else (incident.get("mode", "RETROACTIVE") if isinstance(incident, dict) else "RETROACTIVE")
+        return "retroactive" if str(mode).upper() == "RETROACTIVE" else "live"
 
     # ── Node implementations ──────────────────────────────────────────────────
 
@@ -184,13 +186,21 @@ class AttackChainOrchestrator:
         incident: IncidentInput = state["incident"]
         incident_id = (incident.incident_id or "generic").lower()
 
+        # Map incident_id → actual scenario folder under data/synthetic/
+        # e.g. 'aiims_2022' → 'aiims_attack', 'cbse_2026' → 'cbse_attack'
+        SCENARIO_FOLDER_MAP = {
+            "aiims_2022": "aiims_attack",
+            "cbse_2026":  "cbse_attack",
+        }
+        scenario_folder = SCENARIO_FOLDER_MAP.get(incident_id, f"{incident_id}_attack")
+
         self._push_progress(state, "ingest_node", "running", 5,
                              "Ingesting log files...")
 
         try:
             # Use synthetic scenario loader for known incidents
             result: IngestionResult = await self._ingestion.ingest_synthetic_scenario(
-                scenario=f"{incident_id}_attack"
+                scenario=scenario_folder
             )
 
             self._push_progress(
@@ -207,7 +217,7 @@ class AttackChainOrchestrator:
             from backend.utils.log_parsers import parse_synthetic_json
             from pathlib import Path
 
-            data_dir = Path(f"./data/synthetic/{incident_id}_attack")
+            data_dir = Path(f"./data/synthetic/{scenario_folder}")
             raw_events: list[SecurityEvent] = []
 
             for sub in ("baseline_logs", "attack_logs"):
@@ -219,8 +229,8 @@ class AttackChainOrchestrator:
         except FileNotFoundError:
             # Scenario directory missing — proceed with empty events (demo degrades gracefully)
             logger.warning(
-                "Scenario directory '%s_attack' not found. Proceeding without events.",
-                incident_id,
+                "Scenario directory '%s' not found. Proceeding without events.",
+                scenario_folder,
             )
             raw_events = []
             self._push_progress(

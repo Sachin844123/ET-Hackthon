@@ -5,26 +5,27 @@ from backend.agents.baseline_agent import BehavioralBaselineAgent
 from backend.agents.attribution_agent import TTAttributionAgent
 from backend.agents.retroactive_agent import RetroactivePredictionAgent
 from backend.agents.response_agent import AutonomousResponseAgent
-from backend.models.schemas import AutopsyState, IncidentContext
+from backend.models.schemas import IncidentContext
+from backend.agents.orchestrator import AutopsyState
 
 @pytest.fixture
-def mock_state():
-    return AutopsyState(
-        incident=IncidentContext(
+def mock_state() -> AutopsyState:
+    return {
+        "incident": IncidentContext(
             incident_id="aiims_2022",
             mode="RETROACTIVE",
             scenario_name="AIIMS Delhi Ransomware"
         ),
-        raw_events=[],
-        baselines={},
-        anomaly_scores=[],
-        ttp_attributions=[],
-        retroactive_alerts=[],
-        playbook_executions=[],
-        graph_nodes=[],
-        graph_edges=[],
-        audit_trail=[]
-    )
+        "raw_events": [],
+        "baselines": {},
+        "anomaly_scores": [],
+        "ttp_attributions": [],
+        "retroactive_alerts": [],
+        "playbook_executions": [],
+        "graph_nodes": [],
+        "graph_edges": [],
+        "audit_trail": []
+    }
 
 @pytest.mark.asyncio
 async def test_log_ingestion(mock_state):

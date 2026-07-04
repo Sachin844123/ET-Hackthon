@@ -100,65 +100,68 @@ export default function Demo() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a] flex flex-col font-sans overflow-hidden">
+    <div className="min-h-screen bg-[#0a0e1a] flex flex-col font-sans overflow-hidden cyber-grid-bg">
       
-      {/* Top Bar */}
-      <header className="h-14 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between px-6 shrink-0">
+      {/* Top Bar / Control Center Header */}
+      <header className="h-16 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between px-6 shrink-0 backdrop-blur-md relative z-10">
         <div className="flex items-center gap-3">
-          <Shield className="w-6 h-6 text-red-500" />
-          <h1 className="text-white font-bold tracking-widest text-lg">ATTACK CHAIN <span className="text-red-500">AUTOPSY</span></h1>
-          <span className="bg-slate-800 text-slate-400 text-[10px] px-2 py-0.5 rounded font-mono">v1.0.0</span>
+          <Shield className="w-6 h-6 text-red-500 filter drop-shadow-[0_0_5px_rgba(239,68,68,0.5)] animate-pulse" />
+          <h1 className="text-white font-bold tracking-widest text-lg">ATTACK CHAIN <span className="text-red-500 neon-glow-text-red">AUTOPSY</span></h1>
+          <span className="bg-slate-800 border border-slate-700 text-slate-400 text-[10px] px-2.5 py-0.5 rounded font-mono">CNI RESILIENCE v1.0.0</span>
         </div>
         
         <div className="flex items-center">
           <select 
             value={scenario} 
             onChange={(e) => setScenario(e.target.value)}
-            className="bg-slate-800 border-2 border-slate-700 text-white text-sm font-bold tracking-widest py-1.5 px-4 rounded outline-none focus:border-red-500 transition-colors cursor-pointer appearance-none"
+            className="bg-slate-900 border-2 border-slate-700 hover:border-cyan-500 text-cyan-400 text-xs font-bold tracking-widest py-2 px-6 rounded cursor-pointer outline-none transition-all duration-300 font-mono"
           >
             <option>AIIMS DELHI 2022</option>
             <option>CBSE DATA THEFT 2026</option>
           </select>
         </div>
         
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 text-[10px] tracking-widest text-slate-400 font-bold">
-            <Server className="w-3 h-3 text-green-500" /> NEO4J
+        <div className="hidden lg:flex items-center gap-6">
+          <div className="flex items-center gap-2 text-[10px] tracking-widest text-slate-400 font-bold font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> NEO4J: ONLINE
           </div>
-          <div className="flex items-center gap-2 text-[10px] tracking-widest text-slate-400 font-bold">
-            <Database className="w-3 h-3 text-green-500" /> CHROMA
+          <div className="flex items-center gap-2 text-[10px] tracking-widest text-slate-400 font-bold font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> CHROMA: ONLINE
           </div>
-          <div className="flex items-center gap-2 text-[10px] tracking-widest text-slate-400 font-bold">
-            <Globe className="w-3 h-3 text-green-500" /> MITRE ATT&CK
+          <div className="flex items-center gap-2 text-[10px] tracking-widest text-slate-400 font-bold font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> MITRE STIX: READY
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex overflow-hidden">
+      <main className="flex-1 flex overflow-hidden relative z-10">
         
-        {/* Left Panel (35%) */}
-        <div className="w-[35%] border-r border-slate-800 bg-slate-900/30 flex flex-col overflow-y-auto">
+        {/* Left Control Panel (35%) */}
+        <div className="w-[35%] border-r border-slate-800/80 bg-slate-950/40 flex flex-col overflow-y-auto backdrop-blur-sm tech-border-r">
           <div className="p-6">
-            <h2 className="text-xs font-bold text-slate-500 tracking-widest mb-4">INCIDENT ANALYSIS</h2>
+            <h2 className="text-[10px] font-bold text-slate-500 tracking-widest mb-4 uppercase">SYSTEM CONTROLLER</h2>
             
-            <div className="bg-slate-900 border border-slate-700 rounded-lg p-5 mb-6 shadow-lg">
+            <div className="cyber-card-red p-5 mb-6">
               <div className="flex justify-between items-start mb-4">
-                <h3 className="text-xl font-bold text-white leading-tight">AIIMS Delhi<br/>Ransomware</h3>
-                <span className="bg-red-900/50 text-red-500 border border-red-500/50 text-[10px] font-bold px-2 py-0.5 rounded tracking-wider">CRITICAL</span>
-              </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">Date</span>
-                  <span className="text-slate-300 font-mono">November 2022</span>
+                <div>
+                  <h3 className="text-lg font-bold text-white leading-tight font-mono">{scenario}</h3>
+                  <span className="text-[10px] text-slate-500 font-mono block mt-1">INCIDENT RECONSTRUCTION</span>
                 </div>
-                <div className="flex justify-between border-b border-slate-800 pb-2">
-                  <span className="text-slate-500">Dwell Time</span>
-                  <span className="text-slate-300 font-mono">{isComplete ? '22 Days' : '???'}</span>
+                <span className="bg-red-950/60 text-red-400 border border-red-500/40 text-[9px] font-bold px-2 py-0.5 rounded tracking-wider uppercase">CRITICAL CNI</span>
+              </div>
+              <div className="space-y-2 text-xs font-mono">
+                <div className="flex justify-between border-b border-slate-800/60 pb-2">
+                  <span className="text-slate-500">TARGET SYSTEM</span>
+                  <span className="text-slate-300">CNI INFRASTRUCTURE</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-800/60 pb-2">
+                  <span className="text-slate-500">ATTACK DWELL TIME</span>
+                  <span className="text-slate-300">{isComplete ? '22 Days (Actual)' : 'ANALYZING...'}</span>
                 </div>
                 <div className="flex justify-between pt-1">
-                  <span className="text-slate-500">Status</span>
-                  <span className="text-cyan-400 font-mono text-xs tracking-widest">HISTORICAL — RECONSTRUCTION MODE</span>
+                  <span className="text-slate-500">REPLAY RESOLUTION</span>
+                  <span className="text-cyan-400 font-bold">1-DAY TIME STEPS</span>
                 </div>
               </div>
             </div>
@@ -167,12 +170,12 @@ export default function Demo() {
               <button 
                 onClick={startAutopsy} 
                 disabled={isRunning}
-                className={`w-full py-4 rounded-lg font-bold tracking-widest text-lg flex items-center justify-center gap-2 transition-all ${isRunning ? 'bg-slate-800 text-slate-500 cursor-not-allowed border-2 border-slate-700' : 'bg-red-600 hover:bg-red-500 text-white border-2 border-red-500 shadow-[0_0_20px_rgba(220,38,38,0.4)] animate-pulse hover:animate-none'}`}
+                className={`w-full py-4 rounded font-bold tracking-widest text-sm flex items-center justify-center gap-2 transition-all duration-300 ${isRunning ? 'bg-slate-900 border border-slate-800 text-slate-500 cursor-not-allowed' : 'cyber-button'}`}
               >
                 {isRunning ? (
-                  <><Loader2 className="w-5 h-5 animate-spin" /> RUNNING AUTOPSY...</>
+                  <><Loader2 className="w-4 h-4 animate-spin text-red-500" /> REPLAYING SYNTHETIC LOGS...</>
                 ) : (
-                  <><Play className="w-5 h-5 fill-current" /> RUN ATTACK CHAIN AUTOPSY</>
+                  <><Play className="w-4 h-4 fill-current text-white" /> RUN ATTACK CHAIN AUTOPSY</>
                 )}
               </button>
             )}
@@ -180,29 +183,30 @@ export default function Demo() {
             {/* Progress Tracker */}
             {(isRunning || (isComplete && progressSteps.length > 0)) && (
               <div className="mt-8">
-                <h3 className="text-xs font-bold text-slate-500 tracking-widest mb-4">RECONSTRUCTION PROGRESS</h3>
+                <h3 className="text-[10px] font-bold text-slate-500 tracking-widest mb-4 uppercase">AGENT EXECUTION LOG</h3>
                 <div className="space-y-4">
                   {progressSteps.map((step, idx) => (
-                    <div key={idx} className="flex items-start gap-3">
+                    <div key={idx} className="flex items-start gap-3 bg-slate-900/40 p-3 border border-slate-800/60 rounded animate-fade-in-up">
                       <div className="mt-0.5">
                         {step.status === 'complete' ? (
-                          <div className="w-5 h-5 rounded-full bg-green-900/50 border border-green-500 flex items-center justify-center">
-                            <Check className="w-3 h-3 text-green-500" />
+                          <div className="w-5 h-5 rounded-full bg-green-950/60 border border-green-500/50 flex items-center justify-center">
+                            <Check className="w-2.5 h-2.5 text-green-400" />
                           </div>
                         ) : (
-                          <div className="w-5 h-5 rounded-full border border-cyan-500 flex items-center justify-center">
-                            <Loader2 className="w-3 h-3 text-cyan-500 animate-spin" />
+                          <div className="w-5 h-5 rounded-full bg-cyan-950/40 border border-cyan-500/50 flex items-center justify-center">
+                            <Loader2 className="w-2.5 h-2.5 text-cyan-400 animate-spin" />
                           </div>
                         )}
                       </div>
                       <div className="flex-1">
                         <div className="flex justify-between items-center mb-1">
-                          <span className={`text-sm font-bold ${step.status === 'complete' ? 'text-slate-300' : 'text-cyan-400'}`}>
-                            {step.step}
+                          <span className={`text-xs font-bold font-mono ${step.status === 'complete' ? 'text-slate-300' : 'text-cyan-400 neon-glow-text-cyan'}`}>
+                            {step.step?.toUpperCase()}
                           </span>
-                          {step.progress_pct && <span className="text-xs text-slate-500 font-mono">{step.progress_pct}%</span>}
+                          {step.progress_pct && <span className="text-[10px] text-slate-500 font-mono">{step.progress_pct}%</span>}
                         </div>
-                        {step.agent && <div className="text-[10px] text-slate-500 font-mono tracking-widest">AGENT: {step.agent}</div>}
+                        <div className="text-[11px] text-slate-400 leading-normal">{step.summary}</div>
+                        {step.agent && <div className="text-[9px] text-slate-500 font-mono tracking-widest mt-1">PROCESSOR: {step.agent}</div>}
                       </div>
                     </div>
                   ))}
@@ -210,30 +214,30 @@ export default function Demo() {
               </div>
             )}
 
-            {/* Results Summary */}
+            {/* Results Summary Card */}
             {isComplete && autopsyResult && (
-              <div className="mt-8 bg-slate-900 border-2 border-slate-700 rounded-lg p-5 shadow-xl animate-in fade-in slide-in-from-bottom-4">
-                <h3 className="text-white font-bold tracking-widest mb-4">RECONSTRUCTION SUMMARY</h3>
-                <div className="space-y-3 font-mono text-sm">
-                  <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                    <span className="flex items-center gap-2 text-slate-400"><span className="w-2 h-2 rounded-full bg-red-500"></span> EARLIEST SIGNAL</span>
-                    <span className="text-cyan-400">T-21d</span>
+              <div className="mt-8 cyber-card p-5 animate-fade-in-up">
+                <h3 className="text-white text-xs font-bold tracking-widest mb-4 border-b border-slate-800 pb-2">RECONSTRUCTION INSIGHTS</h3>
+                <div className="space-y-3 font-mono text-xs">
+                  <div className="flex justify-between items-center border-b border-slate-800/60 pb-2">
+                    <span className="flex items-center gap-2 text-slate-400"><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span> EARLIEST SIGNAL</span>
+                    <span className="text-cyan-400 font-bold neon-glow-text-cyan">T-21 DAYS</span>
                   </div>
-                  <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                    <span className="flex items-center gap-2 text-slate-400"><span className="text-amber-500 font-sans text-[10px]">⚡</span> HIGH CONFIDENCE</span>
-                    <span className="text-amber-400">T-19d</span>
+                  <div className="flex justify-between items-center border-b border-slate-800/60 pb-2">
+                    <span className="flex items-center gap-2 text-slate-400"><span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span> HIGH CONFIDENCE</span>
+                    <span className="text-amber-400 font-bold neon-glow-text-amber">T-19 DAYS</span>
                   </div>
-                  <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                    <span className="flex items-center gap-2 text-slate-400"><span className="w-2 h-2 rounded-full bg-orange-500"></span> LAST WINDOW</span>
-                    <span className="text-orange-400">T-10d</span>
+                  <div className="flex justify-between items-center border-b border-slate-800/60 pb-2">
+                    <span className="flex items-center gap-2 text-slate-400"><span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span> CONTAINMENT GAP</span>
+                    <span className="text-orange-400 font-bold">T-10 DAYS</span>
                   </div>
-                  <div className="flex justify-between items-center border-b border-slate-800 pb-2 pt-1">
-                    <span className="flex items-center gap-2 text-white font-bold"><span className="text-green-500 font-sans text-[10px]">✅</span> PREVENTION WINDOW</span>
-                    <span className="text-green-400 font-bold bg-green-900/30 px-2 py-0.5 rounded">19 DAYS</span>
+                  <div className="flex justify-between items-center border-b border-slate-800/60 pb-2 pt-1">
+                    <span className="flex items-center gap-2 text-slate-200 font-bold"><span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> PREVENTATIVE EDGE</span>
+                    <span className="text-green-400 font-bold bg-green-950/40 px-2 py-0.5 border border-green-800/50 rounded">19 DAYS SAVED</span>
                   </div>
                   <div className="flex justify-between items-center pt-2">
-                    <span className="flex items-center gap-2 text-white font-bold"><span className="text-red-500 font-sans text-[10px]">🎯</span> ACTOR</span>
-                    <span className="text-red-500 font-bold">{autopsyResult.actor_attribution?.actor_name || 'APT41'}</span>
+                    <span className="flex items-center gap-2 text-slate-200 font-bold"><span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span> ATTRIBUTED GROUP</span>
+                    <span className="text-red-400 font-bold font-mono">{autopsyResult.actor_attribution?.actor_name || 'APT41'}</span>
                   </div>
                 </div>
               </div>
@@ -241,15 +245,15 @@ export default function Demo() {
           </div>
         </div>
 
-        {/* Right Panel (65%) */}
-        <div className="flex-1 flex flex-col bg-[#0a0e1a]">
-          {/* Tabs */}
-          <div className="flex bg-slate-900 border-b border-slate-800 shrink-0">
+        {/* Right Dashboard Area (65%) */}
+        <div className="flex-1 flex flex-col bg-[#0a0e1a]/80 backdrop-blur-sm">
+          {/* Dashboard Tabs */}
+          <div className="flex bg-slate-900/40 border-b border-slate-800/80 shrink-0">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => isComplete && setActiveTab(tab.id)}
-                className={`flex-1 py-3 text-xs font-bold tracking-widest transition-colors border-b-2 ${activeTab === tab.id ? 'text-white border-red-500 bg-slate-800/50' : 'text-slate-500 border-transparent hover:text-slate-300 hover:bg-slate-800/30'} ${!isComplete && 'cursor-not-allowed opacity-50'}`}
+                className={`flex-1 py-4 text-[10px] font-bold tracking-widest transition-all duration-300 border-b-2 cyber-header-tab ${activeTab === tab.id ? 'active text-white bg-slate-900/60' : 'text-slate-500 border-transparent hover:text-slate-300 hover:bg-slate-900/20'} ${!isComplete && 'cursor-not-allowed opacity-40'}`}
                 disabled={!isComplete}
               >
                 {tab.label}
@@ -257,16 +261,16 @@ export default function Demo() {
             ))}
           </div>
 
-          {/* Tab Content */}
+          {/* Main Display Window */}
           <div className="flex-1 p-6 overflow-y-auto">
             {!isComplete ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-500 border-2 border-dashed border-slate-800 rounded-lg">
-                <Activity className="w-16 h-16 text-slate-700 mb-4" />
-                <h2 className="text-xl text-slate-400 font-bold mb-2 tracking-widest">AWAITING RECONSTRUCTION</h2>
-                <p className="text-sm">Select an incident and run autopsy to begin reconstruction.</p>
+              <div className="h-full flex flex-col items-center justify-center text-slate-500 border-2 border-dashed border-slate-800/80 rounded-lg bg-slate-900/10">
+                <Activity className="w-12 h-12 text-slate-700 mb-4 animate-pulse" />
+                <h2 className="text-sm text-slate-400 font-bold mb-2 tracking-widest uppercase">AWAITING SYSTEM INGESTION</h2>
+                <p className="text-xs text-slate-500 font-mono">Select scenario target above and trigger simulation replay.</p>
               </div>
             ) : (
-              <div className="h-full animate-in fade-in duration-500">
+              <div className="h-full">
                 {activeTab === 'KILL CHAIN' && <AttackChainTimeline autopsy_result={autopsyResult} />}
                 {activeTab === 'ATTACK GRAPH' && <ThreatGraph3D graph_nodes={autopsyResult.graph_nodes} graph_edges={autopsyResult.graph_edges} incident_id={autopsyResult.incident_id} />}
                 {activeTab === 'ALERT TIMELINE' && <RetroactiveTimeline alerts={autopsyResult.retroactive_alerts} incident_date={autopsyResult.incident_date} />}

@@ -164,10 +164,18 @@ class TTAttributionAgent:
         self._driver      = neo4j_driver
         self._mitre       = mitre_client or MITREAttackClient()
         self._progress_cb = progress_callback
-        self._api_key     = anthropic_api_key or os.getenv("ANTHROPIC_API_KEY", "")
-        self._anthropic   = (
-            anthropic.Anthropic(api_key=self._api_key) if self._api_key else None
-        )
+        self._llm_provider = os.getenv("LLM_PROVIDER", "anthropic").lower()
+        
+        if self._llm_provider == "groq":
+            import openai
+            groq_key = os.getenv("GROQ_API_KEY", "")
+            self._llm_client = openai.OpenAI(
+                api_key=groq_key,
+                base_url="https://api.groq.com/openai/v1"
+            ) if groq_key else None
+        else:
+            self._api_key = anthropic_api_key or os.getenv("ANTHROPIC_API_KEY", "")
+            self._llm_client = anthropic.Anthropic(api_key=self._api_key) if self._api_key else None
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -483,9 +491,9 @@ class TTAttributionAgent:
         Call Claude Sonnet 4.6 with the full attribution prompt.
         Returns parsed JSON or a fallback structure if Claude is unavailable.
         """
-        if not self._anthropic:
+        if not self._llm_client:
             logger.warning(
-                "Anthropic client not initialised (API key missing). "
+                f"{self._llm_provider} client not initialised (API key missing). "
                 "Returning deterministic fallback attribution."
             )
             return self._fallback_attribution()
@@ -526,15 +534,26 @@ Return ONLY valid JSON matching this schema:
 }}"""
 
         try:
-            response = await asyncio.get_event_loop().run_in_executor(
-                None,
-                lambda: self._anthropic.messages.create(
-                    model=CLAUDE_MODEL,
-                    max_tokens=2048,
-                    messages=[{"role": "user", "content": prompt}],
-                ),
-            )
-            raw = response.content[0].text.strip()
+            if self._llm_provider == "groq":
+                response = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: self._llm_client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=[{"role": "user", "content": prompt}],
+                        temperature=0.1
+                    )
+                )
+                raw = response.choices[0].message.content.strip()
+            else:
+                response = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: self._llm_client.messages.create(
+                        model=CLAUDE_MODEL,
+                        max_tokens=2048,
+                        messages=[{"role": "user", "content": prompt}],
+                    ),
+                )
+                raw = response.content[0].text.strip()
 
             # Strip markdown code fences if present
             if raw.startswith("```"):

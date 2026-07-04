@@ -42,33 +42,33 @@ export default function AttackChainTimeline({ autopsy_result }) {
     : null;
     
   return (
-    <div className="bg-[#0a0e1a] text-slate-300 p-6 rounded-lg border-2 border-slate-800 shadow-xl overflow-x-auto relative min-h-[400px]">
+    <div className="cyber-card text-slate-300 p-6 overflow-x-auto relative min-h-[400px] bg-[#0a0e1a]/85 backdrop-blur-sm animate-fade-in-up">
       
       {/* Top Banner */}
       <div className="flex justify-center mb-8">
-        <div className="border-2 border-slate-700 bg-slate-900 px-6 py-2 rounded-full shadow-lg shadow-black/50 text-sm tracking-widest font-bold">
+        <div className="cyber-card border-slate-700 bg-slate-950/90 px-6 py-2.5 rounded-full shadow-2xl text-xs tracking-widest font-bold font-mono">
           <span className="text-slate-400">ATTRIBUTED: </span>
-          <span className="text-red-500">APT41 </span>
+          <span className="text-red-500 neon-glow-text-red">APT41 </span>
           <span className="text-slate-500">| CONFIDENCE: </span>
-          <span className="text-amber-500">84% </span>
+          <span className="text-amber-500 neon-glow-text-amber">84% </span>
           <span className="text-slate-500">| CAMPAIGN MATCH: </span>
-          <span className="text-cyan-400">OPERATION DARK WARD</span>
+          <span className="text-cyan-400 neon-glow-text-cyan">OPERATION DARK WARD</span>
         </div>
       </div>
 
       <div className="flex relative mt-16 pb-20 min-w-max">
         
         {/* Horizontal connective line */}
-        <div className="absolute top-[120px] left-0 w-full h-1 bg-slate-800 z-0" />
+        <div className="absolute top-[120px] left-0 w-full h-1 bg-slate-800/80 z-0" />
         
         {/* Prevention Window Indicator */}
-        <div className="absolute top-[80px] h-[80px] bg-green-900/20 border-t-2 border-green-500/50 z-0 flex items-start pt-2 px-2 transition-all duration-1000"
+        <div className="absolute top-[80px] h-[80px] bg-green-950/10 border-t-2 border-green-500/40 z-0 flex items-start pt-2 px-2 transition-all duration-1000"
              style={{ 
                left: '5%', 
                width: '80%', 
                opacity: mounted ? 1 : 0 
              }}>
-          <span className="text-green-400 text-xs font-bold tracking-wider flex items-center gap-1 bg-[#0a0e1a] px-2 py-1 rounded">
+          <span className="text-green-400 text-[10px] font-bold tracking-widest flex items-center gap-1 bg-[#0a0e1a]/90 px-3 py-1 rounded border border-green-500/30 shadow-[0_0_10px_rgba(34,197,94,0.15)]">
              ✓ 19-DAY PREVENTION WINDOW
           </span>
         </div>
@@ -85,41 +85,41 @@ export default function AttackChainTimeline({ autopsy_result }) {
               {/* Alert Badge (if any) */}
               <div className="h-16 flex items-end justify-center mb-4 w-full">
                 {phaseAlert && (
-                  <div className="group relative flex flex-col items-center cursor-pointer hover:-translate-y-1 transition-transform">
-                    <div className="bg-blue-900/40 border border-blue-500 text-blue-400 text-[10px] font-bold px-2 py-1 rounded-full mb-1 flex items-center gap-1 shadow-[0_0_10px_rgba(59,130,246,0.3)]">
+                  <div className="group relative flex flex-col items-center cursor-pointer hover:-translate-y-0.5 transition-transform">
+                    <div className="bg-cyan-950/80 border border-cyan-500/60 text-cyan-400 text-[9px] font-bold px-2 py-0.5 rounded-full mb-1 flex items-center gap-1 shadow-[0_0_10px_rgba(6,182,212,0.25)] font-mono tracking-wider">
                       ⚡ ALERT
                     </div>
-                    <div className="text-xs text-blue-300 font-mono text-center">
+                    <div className="text-[10px] text-cyan-300/85 font-mono text-center leading-tight">
                       {phaseAlert.time_before_incident}<br/>
-                      {Math.round(phaseAlert.confidence * 100)}% Conf
+                      {Math.round(phaseAlert.confidence * 100)}% CONF
                     </div>
                     {/* Tooltip */}
-                    <div className="absolute bottom-full mb-2 w-64 bg-slate-900 border-2 border-slate-700 p-3 rounded shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 text-left">
-                      <p className="text-slate-200 text-xs">{phaseAlert.description}</p>
+                    <div className="absolute bottom-full mb-2 w-64 bg-slate-950 border-2 border-slate-700 p-3 rounded-lg shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300 z-50 text-left">
+                      <p className="text-slate-300 text-xs leading-relaxed">{phaseAlert.description}</p>
                     </div>
                   </div>
                 )}
               </div>
 
               {/* Phase Header */}
-              <div className="text-[10px] uppercase tracking-widest font-bold text-slate-500 mb-4 h-8 text-center px-2">
+              <div className="text-[9px] uppercase tracking-widest font-bold text-slate-500 mb-4 h-8 text-center px-2 font-mono">
                 {phase.replace('Privilege Escalation', 'Priv Esc').replace('Command and Control', 'C2')}
               </div>
 
               {/* Node connecting point */}
-              <div className="w-4 h-4 rounded-full bg-slate-900 border-2 border-slate-600 mb-6 relative z-10" />
+              <div className={`w-3.5 h-3.5 rounded-full bg-slate-950 border-2 mb-6 relative z-10 transition-colors ${phaseAlert ? 'border-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]' : 'border-slate-700'}`} />
 
               {/* TTP Cards */}
               <div className="flex flex-col gap-3 w-11/12">
                 {phaseTTPs.map(ttp => (
-                  <div key={ttp.technique_id} className={`bg-slate-900 p-3 rounded border-l-4 shadow-lg ${ttp.confidence > 0.8 ? 'border-red-500' : 'border-amber-500'}`}>
-                    <div className="font-mono text-xs text-cyan-400 mb-1">{ttp.technique_id}</div>
+                  <div key={ttp.technique_id} className={`cyber-card p-3 border-l-4 shadow-lg ${ttp.confidence > 0.8 ? 'border-l-red-500' : 'border-l-amber-500'}`}>
+                    <div className="font-mono text-xs text-cyan-400 mb-1 font-bold">{ttp.technique_id}</div>
                     <div className="text-xs text-slate-200 font-medium leading-tight mb-2">
                       {ttp.technique_name}
                     </div>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-[9px] text-slate-500 uppercase">Confidence</span>
-                      <span className={`text-[10px] font-bold ${ttp.confidence > 0.8 ? 'text-red-400' : 'text-amber-400'}`}>
+                    <div className="flex items-center justify-between mt-1 border-t border-slate-800/60 pt-1.5 font-mono">
+                      <span className="text-[8px] text-slate-500 uppercase tracking-wider">CONFIDENCE</span>
+                      <span className={`text-[9px] font-bold ${ttp.confidence > 0.8 ? 'text-red-400 neon-glow-text-red' : 'text-amber-400'}`}>
                         {Math.round(ttp.confidence * 100)}%
                       </span>
                     </div>
@@ -130,13 +130,13 @@ export default function AttackChainTimeline({ autopsy_result }) {
               {/* Impact specific UI */}
               {isImpact && (
                 <>
-                  <div className="absolute top-0 bottom-0 left-1/2 border-l-2 border-dashed border-red-500/50 -z-10" />
-                  <div className="absolute top-[90px] bg-[#0a0e1a] border-2 border-red-500 text-red-500 text-xs font-bold px-3 py-1 rounded shadow-[0_0_15px_rgba(239,68,68,0.4)] animate-pulse flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-red-500" />
-                    RANSOMWARE DEPLOYED
+                  <div className="absolute top-0 bottom-0 left-1/2 border-l-2 border-dashed border-red-500/30 -z-10" />
+                  <div className="absolute top-[90px] bg-red-950/90 border-2 border-red-500 text-red-500 text-[10px] font-bold px-3 py-1 rounded shadow-[0_0_20px_rgba(239,68,68,0.5)] animate-pulse flex items-center gap-2 font-mono">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
+                    BREACH IMPACT
                   </div>
-                  <div className="absolute bottom-4 text-[10px] text-red-400/80 font-bold tracking-widest text-center bg-[#0a0e1a] px-2">
-                    T-0 | ACTUAL DISCOVERY
+                  <div className="absolute bottom-4 text-[9px] text-red-400/80 font-bold tracking-widest text-center bg-[#0a0e1a] px-2 font-mono">
+                    T-0 | DATA ENCRYPTED
                   </div>
                 </>
               )}
@@ -146,11 +146,11 @@ export default function AttackChainTimeline({ autopsy_result }) {
       </div>
       
       {/* Bottom Axis */}
-      <div className="absolute bottom-4 left-0 w-full px-12 flex justify-between text-slate-600 font-mono text-[10px]">
+      <div className="absolute bottom-4 left-0 w-full px-12 flex justify-between text-slate-600 font-mono text-[9px] tracking-wider uppercase">
         <span>Day 1 (T-21)</span>
         <span>Day 7 (T-15)</span>
         <span>Day 14 (T-8)</span>
-        <span className="text-red-500/80">Day 22 (T-0)</span>
+        <span className="text-red-500 font-bold">Day 22 (T-0)</span>
       </div>
     </div>
   );

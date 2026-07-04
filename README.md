@@ -1,6 +1,6 @@
 <div align="center">
   
-# ⚔️ Attack Chain Autopsy Engine
+# Attack Chain Autopsy Engine
 
 **AI-Powered Cyber Resilience Platform for Critical National Infrastructure**
 
