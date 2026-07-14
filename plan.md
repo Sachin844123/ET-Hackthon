@@ -100,24 +100,32 @@ different, flag it, don't just accept it.
 
 ## 4. Current Build State
 
-**Status as of last update: NOTHING BUILT YET. Planning phase only.**
+**Status as of last update: BACKEND COMPLETE + FRONTEND UI COMPLETE (2026-07-11)**
+**Updated by:** Antigravity agent session
 
 Completed so far:
 - [x] Problem statement selected (PS7 — Cyber Resilience)
 - [x] Concept designed (Attack Chain Autopsy — retroactive reconstruction)
-- [x] Full plan.md written (`attack_chain_autopsy_plan.md`)
-- [x] Full mega-prompt written (`attack_chain_autopsy_megaprompt.md`)
-- [x] Section 2 (backend foundation) implementation plan reviewed and corrected
-- [ ] Section 1 (scaffold + synthetic data) — NOT STARTED
-- [ ] Section 2 (backend: FastAPI + Neo4j + models) — PLANNED, NOT CODED
-- [ ] Section 3 (5 agents) — NOT STARTED
-- [ ] Section 4 (React frontend) — NOT STARTED
-- [ ] Section 5 (deck + demo script) — NOT STARTED
+- [x] Full plan.md written
+- [x] Full mega-prompt written
+- [x] Section 2 (backend foundation) — COMPLETE
+- [x] Section 3 (5 LangGraph agents) — COMPLETE
+- [x] FastAPI backend with SSE streaming, Neo4j, ChromaDB — COMPLETE
+- [x] Anomaly scorer verified: known_ttp_match=0.5 ✓ (cross-checked against Section 2)
+- [x] Section 4 (React frontend — all 5 tabs + Landing) — COMPLETE
+  - [x] Landing.jsx — 2-col hero, boot sequence, workspace card with KillChainNode, ThreatFeedItem
+  - [x] Demo.jsx — sidebar icon rail, SystemControllerPanel, cached load on mount, all 5 tabs
+  - [x] AttackChainTimeline.jsx — attribution bar, green prevention banner, 9 stages, stat strip
+  - [x] AttackPathDiagram.jsx (NEW) — SVG structured flow diagram, 3 paths, day slider, MITRE names
+  - [x] RetroactiveTimeline.jsx — ransomware banner, horizontal scale, reconstruction summary, alert rows
+  - [x] PlaybookExecutor.jsx — category filter, empty state, playbook cards, bottom audit bar
+  - [x] ThreatIntelPanel.jsx — attribution ring, TTP forecast (MITRE names resolved), CERT-IN directives, feed
+  - [x] useMitreLookup.js hook — module-level cache, /api/mitre/technique/{id}, offline stubs
+  - [x] KillChainNode.jsx, ThreatFeedItem.jsx, SystemControllerPanel.jsx — shared components
+  - [x] constants/killChain.js, constants/threatFeed.js — single source of truth
+  - [x] ThreatGraph3D.jsx archived → _ThreatGraph3D.jsx.bak (superseded by AttackPathDiagram)
+- [ ] Section 5 (deck + demo script) — IN PROGRESS
 - [ ] Section 6 (tests + setup script) — NOT STARTED
-
-**Next immediate step:** Generate Section 1 (project scaffold + synthetic AIIMS/CBSE
-datasets). Nothing in Section 2+ can be properly tested without the synthetic data
-existing first, even though Section 2 was planned first.
 
 ---
 

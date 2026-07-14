@@ -1,19 +1,75 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Shield, Play, Activity, Server, Database, Globe, Check, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Shield, LayoutDashboard, Network, Bell, BookOpen,
+  Play, Settings, LogOut, ChevronDown, User, Target
+} from 'lucide-react';
+import SystemControllerPanel from '../components/SystemControllerPanel';
 import AttackChainTimeline from '../components/AttackChainTimeline';
-import ThreatGraph3D from '../components/ThreatGraph3D';
+import AttackPathDiagram from '../components/AttackPathDiagram';
 import RetroactiveTimeline from '../components/RetroactiveTimeline';
 import PlaybookExecutor from '../components/PlaybookExecutor';
 import ThreatIntelPanel from '../components/ThreatIntelPanel';
+import ParticleBackground from '../components/ParticleBackground';
+
+const TABS = [
+  { id: 'kill-chain',     label: 'KILL CHAIN',    icon: Shield },
+  { id: 'attack-graph',   label: 'ATTACK GRAPH',  icon: Network },
+  { id: 'alert-timeline', label: 'ALERT TIMELINE', icon: Bell },
+  { id: 'playbooks',      label: 'PLAYBOOKS',     icon: BookOpen },
+  { id: 'threat-intel',   label: 'THREAT INTEL',  icon: Target },
+];
+
+const SIDEBAR_ICONS = [
+  { icon: LayoutDashboard, label: 'Dashboard', tab: 'kill-chain' },
+  { icon: Network,         label: 'Attack Graph', tab: 'attack-graph' },
+  { icon: Bell,            label: 'Alerts', tab: 'alert-timeline' },
+  { icon: BookOpen,        label: 'Playbooks', tab: 'playbooks' },
+  { icon: Play,            label: 'Threat Intel', tab: 'threat-intel' },
+  { icon: Settings,        label: 'Settings', tab: null },
+];
+
+const SCENARIOS = [
+  { label: 'AIIMS DELHI 2022', endpoint: '/api/demo/aiims/live', cacheEndpoint: '/api/demo/aiims' },
+  { label: 'CBSE DATA THEFT 2026', endpoint: '/api/demo/cbse/live', cacheEndpoint: '/api/demo/cbse' },
+];
 
 export default function Demo() {
-  const [activeTab, setActiveTab] = useState('KILL CHAIN');
+  const [activeTab, setActiveTab] = useState('kill-chain');
   const [isRunning, setIsRunning] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [progressSteps, setProgressSteps] = useState([]);
   const [autopsyResult, setAutopsyResult] = useState(null);
-  
-  const [scenario, setScenario] = useState('AIIMS DELHI 2022');
+  const [scenario, setScenario] = useState(SCENARIOS[0].label);
+  const [healthStatus, setHealthStatus] = useState({ neo4j: false, chroma: false, mitre: false });
+  const [alertCount, setAlertCount] = useState(0);
+
+  // Load cached result on mount for instant demo
+  useEffect(() => {
+    const scenarioCfg = SCENARIOS.find(s => s.label === scenario) || SCENARIOS[0];
+    fetch(scenarioCfg.cacheEndpoint)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) {
+          setAutopsyResult(data);
+          setIsComplete(true);
+          setAlertCount(data.retroactive_alerts?.length || 0);
+        }
+      })
+      .catch(() => {});
+
+    // Health check
+    fetch('/health')
+      .then(r => r.ok ? r.json() : null)
+      .then(h => {
+        if (h) setHealthStatus({
+          neo4j: h.neo4j_connected,
+          chroma: h.chromadb_ready,
+          mitre: h.mitre_techniques_loaded > 5,
+        });
+      })
+      .catch(() => {});
+  }, [scenario]);
 
   const startAutopsy = async () => {
     setIsRunning(true);
@@ -21,266 +77,357 @@ export default function Demo() {
     setProgressSteps([]);
     setAutopsyResult(null);
 
-    // Call the real backend SSE endpoint
+    const scenarioCfg = SCENARIOS.find(s => s.label === scenario) || SCENARIOS[0];
+
     try {
-      const response = await fetch('http://localhost:8000/api/demo/aiims/live', {
-        method: 'POST',
-      });
-      
+      const response = await fetch(scenarioCfg.endpoint, { method: 'POST' });
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      
+
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-        
         const chunk = decoder.decode(value);
-        const lines = chunk.split('\n\n');
-        
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              
-              if (data.status === 'complete' && data.result) {
-                setAutopsyResult(data.result);
-                setIsComplete(true);
-                setIsRunning(false);
-                setActiveTab('KILL CHAIN');
-              } else {
-                setProgressSteps(prev => {
-                  // Keep only latest 5 or update existing step
-                  const existing = prev.findIndex(s => s.step === data.step);
-                  if (existing >= 0) {
-                    const newSteps = [...prev];
-                    newSteps[existing] = data;
-                    return newSteps;
-                  }
-                  return [...prev, data];
-                });
-              }
-            } catch (e) {
-              // Parse error on chunk
+        for (const line of chunk.split('\n\n')) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.status === 'complete' && data.result) {
+              setAutopsyResult(data.result);
+              setIsComplete(true);
+              setIsRunning(false);
+              setAlertCount(data.result.retroactive_alerts?.length || 0);
+            } else {
+              setProgressSteps(prev => {
+                const idx = prev.findIndex(s => s.step === data.step);
+                if (idx >= 0) { const n = [...prev]; n[idx] = data; return n; }
+                return [...prev, data];
+              });
             }
-          }
+          } catch { /* ignore parse errors */ }
         }
       }
-    } catch (error) {
-      console.error("Autopsy run failed:", error);
+    } catch (err) {
+      console.error('Autopsy run failed:', err);
       setIsRunning(false);
     }
   };
 
   const handleApprovePlaybook = async (execution_id) => {
     try {
-      const res = await fetch(`http://localhost:8000/api/playbook/approve/${execution_id}`, {
-        method: 'POST'
-      });
+      const res = await fetch(`/api/playbook/approve/${execution_id}`, { method: 'POST' });
       if (res.ok) {
-        const updatedExec = await res.json();
+        const updated = await res.json();
         setAutopsyResult(prev => {
           if (!prev) return prev;
-          const newExecs = prev.playbook_executions.map(ex => 
-            ex.execution_id === execution_id ? updatedExec : ex
-          );
-          return { ...prev, playbook_executions: newExecs };
+          return {
+            ...prev,
+            playbook_executions: prev.playbook_executions?.map(e =>
+              e.execution_id === execution_id ? updated : e
+            ) || [],
+          };
         });
       }
-    } catch (err) {
-      console.error("Approve failed", err);
-    }
+    } catch (err) { console.error('Approve failed', err); }
   };
 
-  const tabs = [
-    { id: 'KILL CHAIN', label: 'KILL CHAIN' },
-    { id: 'ATTACK GRAPH', label: 'ATTACK GRAPH' },
-    { id: 'ALERT TIMELINE', label: 'ALERT TIMELINE' },
-    { id: 'PLAYBOOKS', label: 'PLAYBOOKS' },
-    { id: 'THREAT INTEL', label: 'THREAT INTEL' }
-  ];
+  const tabId = (id) => id; // alias for clarity
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a] flex flex-col font-sans overflow-hidden cyber-grid-bg">
-      
-      {/* Top Bar / Control Center Header */}
-      <header className="h-16 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between px-6 shrink-0 backdrop-blur-md relative z-10">
-        <div className="flex items-center gap-3">
-          <Shield className="w-6 h-6 text-red-500 filter drop-shadow-[0_0_5px_rgba(239,68,68,0.5)] animate-pulse" />
-          <h1 className="text-white font-bold tracking-widest text-lg">ATTACK CHAIN <span className="text-red-500 neon-glow-text-red">AUTOPSY</span></h1>
-          <span className="bg-slate-800 border border-slate-700 text-slate-400 text-[10px] px-2.5 py-0.5 rounded font-mono">CNI RESILIENCE v1.0.0</span>
-        </div>
-        
-        <div className="flex items-center">
-          <select 
-            value={scenario} 
-            onChange={(e) => setScenario(e.target.value)}
-            className="bg-slate-900 border-2 border-slate-700 hover:border-cyan-500 text-cyan-400 text-xs font-bold tracking-widest py-2 px-6 rounded cursor-pointer outline-none transition-all duration-300 font-mono"
+    <div
+      className="min-h-screen flex flex-col font-sans overflow-hidden"
+      style={{ background: '#0a0e14', color: '#f1f5f9' }}
+    >
+      {/* ── TOP BAR ──────────────────────────────────────────────────── */}
+      <header
+        className="h-14 flex items-center justify-between px-4 shrink-0 relative z-20"
+        style={{
+          background: 'rgba(11,15,23,0.95)',
+          borderBottom: '1px solid rgba(30,37,48,0.9)',
+          backdropFilter: 'blur(12px)',
+        }}
+      >
+        {/* Logo */}
+        <div className="flex items-center gap-2.5">
+          <Shield className="w-5 h-5 text-red-500" style={{ filter: 'drop-shadow(0 0 6px rgba(239,68,68,0.6))' }} />
+          <span className="text-white font-bold tracking-widest text-sm font-mono">
+            ATTACK CHAIN <span className="text-red-500">AUTOPSY</span>
+          </span>
+          <span
+            className="text-[9px] font-mono px-2 py-0.5 rounded"
+            style={{ background: 'rgba(30,37,48,0.8)', border: '1px solid rgba(51,65,85,0.5)', color: '#64748b' }}
           >
-            <option>AIIMS DELHI 2022</option>
-            <option>CBSE DATA THEFT 2026</option>
-          </select>
+            CNI RESILIENCE v1.0.0
+          </span>
         </div>
-        
-        <div className="hidden lg:flex items-center gap-6">
-          <div className="flex items-center gap-2 text-[10px] tracking-widest text-slate-400 font-bold font-mono">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> NEO4J: ONLINE
+
+        {/* Scenario Selector */}
+        <div className="relative flex items-center gap-1.5">
+          <select
+            value={scenario}
+            onChange={e => {
+              setScenario(e.target.value);
+              setAutopsyResult(null);
+              setIsComplete(false);
+              setProgressSteps([]);
+            }}
+            className="appearance-none text-[11px] font-bold font-mono tracking-widest py-1.5 px-4 pr-8 rounded border outline-none cursor-pointer transition-all"
+            style={{
+              background: 'rgba(15,21,37,0.9)',
+              border: '1.5px solid rgba(6,182,212,0.4)',
+              color: '#22d3ee',
+            }}
+          >
+            {SCENARIOS.map(s => <option key={s.label} value={s.label}>{s.label}</option>)}
+          </select>
+          <ChevronDown className="absolute right-2 w-3 h-3 text-cyan-400 pointer-events-none" />
+        </div>
+
+        {/* Right: status pills + bell + avatar */}
+        <div className="flex items-center gap-4">
+          <div className="hidden lg:flex items-center gap-4">
+            {[
+              { label: 'NEO4J', suffix: 'ONLINE', ok: healthStatus.neo4j },
+              { label: 'CHROMA', suffix: 'ONLINE', ok: healthStatus.chroma },
+              { label: 'MITRE STIX', suffix: 'READY', ok: healthStatus.mitre },
+            ].map(({ label, suffix, ok }) => (
+              <div key={label} className="flex items-center gap-1.5 text-[9px] tracking-widest font-bold font-mono">
+                <span
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{
+                    background: ok ? '#22c55e' : '#ef4444',
+                    boxShadow: `0 0 6px ${ok ? '#22c55e' : '#ef4444'}`,
+                  }}
+                />
+                <span style={{ color: ok ? '#94a3b8' : '#ef4444' }}>{label}: {suffix}</span>
+              </div>
+            ))}
           </div>
-          <div className="flex items-center gap-2 text-[10px] tracking-widest text-slate-400 font-bold font-mono">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> CHROMA: ONLINE
+
+          {/* Bell */}
+          <div className="relative cursor-pointer">
+            <Bell className="w-4 h-4 text-slate-400 hover:text-white transition-colors" />
+            {alertCount > 0 && (
+              <span
+                className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[8px] font-bold font-mono flex items-center justify-center"
+                style={{ background: '#ef4444', color: '#fff' }}
+              >
+                {alertCount > 9 ? '9+' : alertCount}
+              </span>
+            )}
           </div>
-          <div className="flex items-center gap-2 text-[10px] tracking-widest text-slate-400 font-bold font-mono">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> MITRE STIX: READY
+
+          {/* Avatar */}
+          <div
+            className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold font-mono cursor-pointer"
+            style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff' }}
+          >
+            SS
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 flex overflow-hidden relative z-10">
-        
-        {/* Left Control Panel (35%) */}
-        <div className="w-[35%] border-r border-slate-800/80 bg-slate-950/40 flex flex-col overflow-y-auto backdrop-blur-sm tech-border-r">
-          <div className="p-6">
-            <h2 className="text-[10px] font-bold text-slate-500 tracking-widest mb-4 uppercase">SYSTEM CONTROLLER</h2>
-            
-            <div className="cyber-card-red p-5 mb-6">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-lg font-bold text-white leading-tight font-mono">{scenario}</h3>
-                  <span className="text-[10px] text-slate-500 font-mono block mt-1">INCIDENT RECONSTRUCTION</span>
-                </div>
-                <span className="bg-red-950/60 text-red-400 border border-red-500/40 text-[9px] font-bold px-2 py-0.5 rounded tracking-wider uppercase">CRITICAL CNI</span>
-              </div>
-              <div className="space-y-2 text-xs font-mono">
-                <div className="flex justify-between border-b border-slate-800/60 pb-2">
-                  <span className="text-slate-500">TARGET SYSTEM</span>
-                  <span className="text-slate-300">CNI INFRASTRUCTURE</span>
-                </div>
-                <div className="flex justify-between border-b border-slate-800/60 pb-2">
-                  <span className="text-slate-500">ATTACK DWELL TIME</span>
-                  <span className="text-slate-300">{isComplete ? '22 Days (Actual)' : 'ANALYZING...'}</span>
-                </div>
-                <div className="flex justify-between pt-1">
-                  <span className="text-slate-500">REPLAY RESOLUTION</span>
-                  <span className="text-cyan-400 font-bold">1-DAY TIME STEPS</span>
-                </div>
-              </div>
-            </div>
+      {/* ── BODY ─────────────────────────────────────────────────────── */}
+      <div className="flex flex-1 overflow-hidden relative z-10">
 
-            {!isComplete && (
-              <button 
-                onClick={startAutopsy} 
-                disabled={isRunning}
-                className={`w-full py-4 rounded font-bold tracking-widest text-sm flex items-center justify-center gap-2 transition-all duration-300 ${isRunning ? 'bg-slate-900 border border-slate-800 text-slate-500 cursor-not-allowed' : 'cyber-button'}`}
-              >
-                {isRunning ? (
-                  <><Loader2 className="w-4 h-4 animate-spin text-red-500" /> REPLAYING SYNTHETIC LOGS...</>
-                ) : (
-                  <><Play className="w-4 h-4 fill-current text-white" /> RUN ATTACK CHAIN AUTOPSY</>
-                )}
-              </button>
+        {/* Left Sidebar Icon Rail */}
+        <div
+          className="w-12 flex flex-col items-center py-3 gap-3 shrink-0 relative z-20"
+          style={{ background: 'rgba(11,15,23,0.95)', borderRight: '1px solid rgba(30,37,48,0.9)' }}
+        >
+          {SIDEBAR_ICONS.map(({ icon: Icon, label, tab }) => (
+            <button
+              key={label}
+              onClick={() => tab && setActiveTab(tab)}
+              title={label}
+              className="w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:scale-110"
+              style={{
+                background: activeTab === tab ? 'rgba(239,68,68,0.2)' : 'transparent',
+                border: activeTab === tab ? '1px solid rgba(239,68,68,0.4)' : '1px solid transparent',
+              }}
+            >
+              <Icon
+                className="w-4 h-4"
+                style={{ color: activeTab === tab ? '#ef4444' : '#475569' }}
+              />
+            </button>
+          ))}
+          <div className="mt-auto">
+            <button title="Export" className="w-8 h-8 rounded-lg flex items-center justify-center">
+              <LogOut className="w-4 h-4 text-slate-600 hover:text-slate-400 transition-colors" />
+            </button>
+          </div>
+        </div>
+
+        {/* Left Panel — SystemControllerPanel (hidden on attack-graph, Tab 2 has its own) */}
+        {activeTab !== 'attack-graph' && (
+          <div
+            className="w-72 shrink-0 overflow-y-auto border-r"
+            style={{
+              background: 'rgba(11,15,23,0.7)',
+              borderColor: 'rgba(30,37,48,0.8)',
+            }}
+          >
+            <SystemControllerPanel
+              scenario={scenario}
+              tab={activeTab}
+              isRunning={isRunning}
+              isComplete={isComplete}
+              autopsyResult={autopsyResult}
+              progressSteps={progressSteps}
+              onRun={startAutopsy}
+            />
+          </div>
+        )}
+
+        {/* Right Area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+
+          {/* Tab Bar */}
+          <div
+            className="flex shrink-0"
+            style={{
+              background: 'rgba(11,15,23,0.95)',
+              borderBottom: '1px solid rgba(30,37,48,0.9)',
+            }}
+          >
+            {TABS.map(({ id, label, icon: Icon }) => {
+              const active = activeTab === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => setActiveTab(id)}
+                  className="flex items-center gap-1.5 px-5 py-3 text-[10px] font-bold tracking-widest font-mono transition-all relative"
+                  style={{
+                    color: active ? '#fff' : '#475569',
+                    background: active ? 'rgba(239,68,68,0.08)' : 'transparent',
+                    borderBottom: active ? '2px solid #ef4444' : '2px solid transparent',
+                  }}
+                >
+                  <Icon className="w-3 h-3" style={{ color: active ? '#ef4444' : '#475569' }} />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Tab Content */}
+          <div className="flex-1 overflow-hidden relative">
+            {!isComplete && !isRunning && activeTab !== 'attack-graph' && (
+              <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
+                <ParticleBackground variant="dense" />
+              </div>
             )}
 
-            {/* Progress Tracker */}
-            {(isRunning || (isComplete && progressSteps.length > 0)) && (
-              <div className="mt-8">
-                <h3 className="text-[10px] font-bold text-slate-500 tracking-widest mb-4 uppercase">AGENT EXECUTION LOG</h3>
-                <div className="space-y-4">
-                  {progressSteps.map((step, idx) => (
-                    <div key={idx} className="flex items-start gap-3 bg-slate-900/40 p-3 border border-slate-800/60 rounded animate-fade-in-up">
-                      <div className="mt-0.5">
-                        {step.status === 'complete' ? (
-                          <div className="w-5 h-5 rounded-full bg-green-950/60 border border-green-500/50 flex items-center justify-center">
-                            <Check className="w-2.5 h-2.5 text-green-400" />
-                          </div>
-                        ) : (
-                          <div className="w-5 h-5 rounded-full bg-cyan-950/40 border border-cyan-500/50 flex items-center justify-center">
-                            <Loader2 className="w-2.5 h-2.5 text-cyan-400 animate-spin" />
-                          </div>
-                        )}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab + (isComplete ? '_done' : '_empty')}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25 }}
+                className="h-full overflow-y-auto"
+              >
+              {!isComplete && !isRunning && activeTab !== 'attack-graph' ? (
+                  /* Empty state */
+                  <div className="h-full flex flex-col items-center justify-center text-slate-600">
+                    <div
+                      className="w-16 h-16 rounded-full flex items-center justify-center mb-5"
+                      style={{ border: '2px dashed rgba(6,182,212,0.2)', background: 'rgba(6,182,212,0.05)' }}
+                    >
+                      <Shield className="w-7 h-7 text-cyan-900" style={{ animation: 'pulse 2s infinite' }} />
+                    </div>
+                    <h2 className="text-sm font-bold tracking-widest font-mono text-cyan-600/40 mb-2">
+                      AWAITING SYSTEM INGESTION
+                    </h2>
+                    <p className="text-[11px] font-mono text-slate-700">
+                      Select scenario target and trigger simulation replay.
+                    </p>
+                  </div>
+                ) : isRunning && !isComplete && activeTab !== 'attack-graph' ? (
+                  /* Running state */
+                  <div className="h-full flex flex-col items-center justify-center gap-6">
+                    <div className="relative">
+                      <div className="w-20 h-20 rounded-full border-2 border-red-500/30 flex items-center justify-center" style={{ boxShadow: '0 0 30px rgba(239,68,68,0.15)' }}>
+                        <div className="w-14 h-14 rounded-full border-2 border-t-red-500 border-r-red-400 border-b-transparent border-l-transparent animate-spin" />
                       </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className={`text-xs font-bold font-mono ${step.status === 'complete' ? 'text-slate-300' : 'text-cyan-400 neon-glow-text-cyan'}`}>
-                            {step.step?.toUpperCase()}
-                          </span>
-                          {step.progress_pct && <span className="text-[10px] text-slate-500 font-mono">{step.progress_pct}%</span>}
-                        </div>
-                        <div className="text-[11px] text-slate-400 leading-normal">{step.summary}</div>
-                        {step.agent && <div className="text-[9px] text-slate-500 font-mono tracking-widest mt-1">PROCESSOR: {step.agent}</div>}
+                      <div className="absolute inset-0 rounded-full border border-red-500/10 animate-ping" />
+                    </div>
+                    <div className="text-center">
+                      <div className="text-sm font-bold font-mono text-red-400 tracking-widest mb-1 animate-pulse">
+                        EXECUTING AUTOPSY
+                      </div>
+                      <div className="text-[11px] font-mono text-slate-500">
+                        {progressSteps.length > 0
+                          ? (progressSteps[progressSteps.length - 1]?.summary || 'Reconstructing attack chain...')
+                          : 'Initializing agents...'}
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Results Summary Card */}
-            {isComplete && autopsyResult && (
-              <div className="mt-8 cyber-card p-5 animate-fade-in-up">
-                <h3 className="text-white text-xs font-bold tracking-widest mb-4 border-b border-slate-800 pb-2">RECONSTRUCTION INSIGHTS</h3>
-                <div className="space-y-3 font-mono text-xs">
-                  <div className="flex justify-between items-center border-b border-slate-800/60 pb-2">
-                    <span className="flex items-center gap-2 text-slate-400"><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span> EARLIEST SIGNAL</span>
-                    <span className="text-cyan-400 font-bold neon-glow-text-cyan">T-21 DAYS</span>
+                    {progressSteps.length > 0 && (
+                      <div className="w-64">
+                        <div className="flex justify-between text-[9px] font-mono text-slate-500 mb-1">
+                          <span>PROGRESS</span>
+                          <span>{Math.min(100, Math.round((progressSteps.filter(s => s.status === 'complete').length / 5) * 100))}%</span>
+                        </div>
+                        <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(30,41,59,0.8)' }}>
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              background: 'linear-gradient(90deg, #06b6d4, #ef4444)',
+                              width: `${Math.max(5, Math.min(95, (progressSteps.filter(s => s.status === 'complete').length / 5) * 100))}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex justify-between items-center border-b border-slate-800/60 pb-2">
-                    <span className="flex items-center gap-2 text-slate-400"><span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span> HIGH CONFIDENCE</span>
-                    <span className="text-amber-400 font-bold neon-glow-text-amber">T-19 DAYS</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b border-slate-800/60 pb-2">
-                    <span className="flex items-center gap-2 text-slate-400"><span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span> CONTAINMENT GAP</span>
-                    <span className="text-orange-400 font-bold">T-10 DAYS</span>
-                  </div>
-                  <div className="flex justify-between items-center border-b border-slate-800/60 pb-2 pt-1">
-                    <span className="flex items-center gap-2 text-slate-200 font-bold"><span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> PREVENTATIVE EDGE</span>
-                    <span className="text-green-400 font-bold bg-green-950/40 px-2 py-0.5 border border-green-800/50 rounded">19 DAYS SAVED</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2">
-                    <span className="flex items-center gap-2 text-slate-200 font-bold"><span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span> ATTRIBUTED GROUP</span>
-                    <span className="text-red-400 font-bold font-mono">{autopsyResult.actor_attribution?.actor_name || 'APT41'}</span>
-                  </div>
-                </div>
-              </div>
-            )}
+                ) : (
+                  <>
+                    {activeTab === 'kill-chain' && (
+                      <div className="p-4 h-full">
+                        <AttackChainTimeline autopsy_result={autopsyResult} />
+                      </div>
+                    )}
+                    {activeTab === 'attack-graph' && (
+                      <AttackPathDiagram
+                        graph_nodes={autopsyResult?.graph_nodes || []}
+                        graph_edges={autopsyResult?.graph_edges || []}
+                        incident_id={autopsyResult?.incident_id || 'aiims_2022'}
+                        autopsyResult={autopsyResult}
+                      />
+                    )}
+                    {activeTab === 'alert-timeline' && (
+                      <div className="p-4 h-full">
+                        <RetroactiveTimeline
+                          alerts={autopsyResult?.retroactive_alerts || []}
+                          autopsyResult={autopsyResult}
+                        />
+                      </div>
+                    )}
+                    {activeTab === 'playbooks' && (
+                      <div className="p-4 h-full">
+                        <PlaybookExecutor
+                          executions={autopsyResult?.playbook_executions || []}
+                          on_approve={handleApprovePlaybook}
+                        />
+                      </div>
+                    )}
+                    {activeTab === 'threat-intel' && (
+                      <div className="p-4 h-full">
+                        <ThreatIntelPanel
+                          actor_attribution={autopsyResult?.actor_attribution}
+                          predicted_ttps={autopsyResult?.ttp_attributions || []}
+                          autopsyResult={autopsyResult}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
-
-        {/* Right Dashboard Area (65%) */}
-        <div className="flex-1 flex flex-col bg-[#0a0e1a]/80 backdrop-blur-sm">
-          {/* Dashboard Tabs */}
-          <div className="flex bg-slate-900/40 border-b border-slate-800/80 shrink-0">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => isComplete && setActiveTab(tab.id)}
-                className={`flex-1 py-4 text-[10px] font-bold tracking-widest transition-all duration-300 border-b-2 cyber-header-tab ${activeTab === tab.id ? 'active text-white bg-slate-900/60' : 'text-slate-500 border-transparent hover:text-slate-300 hover:bg-slate-900/20'} ${!isComplete && 'cursor-not-allowed opacity-40'}`}
-                disabled={!isComplete}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Main Display Window */}
-          <div className="flex-1 p-6 overflow-y-auto">
-            {!isComplete ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-500 border-2 border-dashed border-slate-800/80 rounded-lg bg-slate-900/10">
-                <Activity className="w-12 h-12 text-slate-700 mb-4 animate-pulse" />
-                <h2 className="text-sm text-slate-400 font-bold mb-2 tracking-widest uppercase">AWAITING SYSTEM INGESTION</h2>
-                <p className="text-xs text-slate-500 font-mono">Select scenario target above and trigger simulation replay.</p>
-              </div>
-            ) : (
-              <div className="h-full">
-                {activeTab === 'KILL CHAIN' && <AttackChainTimeline autopsy_result={autopsyResult} />}
-                {activeTab === 'ATTACK GRAPH' && <ThreatGraph3D graph_nodes={autopsyResult.graph_nodes} graph_edges={autopsyResult.graph_edges} incident_id={autopsyResult.incident_id} />}
-                {activeTab === 'ALERT TIMELINE' && <RetroactiveTimeline alerts={autopsyResult.retroactive_alerts} incident_date={autopsyResult.incident_date} />}
-                {activeTab === 'PLAYBOOKS' && <PlaybookExecutor executions={autopsyResult.playbook_executions} on_approve={handleApprovePlaybook} />}
-                {activeTab === 'THREAT INTEL' && <ThreatIntelPanel actor_attribution={autopsyResult.actor_attribution} predicted_ttps={autopsyResult.ttp_attributions} />}
-              </div>
-            )}
-          </div>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }

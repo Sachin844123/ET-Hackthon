@@ -10,7 +10,7 @@ Usage:
 
 Requires:
     - Running Neo4j instance (docker-compose up -d neo4j)
-    - .env with NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, OPENAI_API_KEY
+    - .env with NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, GROQ_API_KEY
     - data/synthetic/ directory with scenario JSON files
 """
 
@@ -30,7 +30,9 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 from rich.panel import Panel
 from rich.table import Table
 import chromadb
-from openai import OpenAI
+# Embeddings use chromadb's built-in local model (all-MiniLM-L6-v2)
+# No OpenAI / Claude key required for the vector store
+from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
 
 # ── Load environment ──────────────────────────────────────────
 load_dotenv()
@@ -40,7 +42,7 @@ NEO4J_URI      = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER     = os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "autopsy_secure_2024")
 CHROMA_PATH    = os.getenv("CHROMA_PATH", "./chroma_db")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+GROQ_API_KEY   = os.getenv("GROQ_API_KEY", "")   # used by backend LLM, not embeddings
 DATA_DIR       = Path(os.getenv("DATA_DIR", "./data/synthetic"))
 
 
@@ -459,20 +461,19 @@ def load_cert_in_iocs(driver) -> int:
 def populate_chromadb() -> int:
     """
     Populate ChromaDB with embeddings of security events for semantic search.
-    Uses OpenAI text-embedding-3-small.
+    Uses ChromaDB's built-in DefaultEmbeddingFunction (all-MiniLM-L6-v2, runs locally).
+    No OpenAI / Claude key required — works with Groq-only setups.
     Returns number of documents embedded.
     """
-    if not OPENAI_API_KEY:
-        console.print("  [yellow]⚠ OPENAI_API_KEY not set — skipping ChromaDB population[/yellow]")
-        return 0
+    embed_fn = DefaultEmbeddingFunction()  # local sentence-transformers model
 
     client = chromadb.PersistentClient(path=CHROMA_PATH)
     collection = client.get_or_create_collection(
         name="security_events",
+        embedding_function=embed_fn,
         metadata={"description": "AIIMS and CBSE attack event embeddings for semantic search"}
     )
 
-    openai_client = OpenAI(api_key=OPENAI_API_KEY)
     docs, ids, metadatas = [], [], []
 
     # Collect events from all attack log files
@@ -510,24 +511,18 @@ def populate_chromadb() -> int:
     if not docs:
         return 0
 
-    # Batch embed (API limit: 2048 per request)
+    # Upsert in batches — embedding computed locally, no API calls
     batch_size = 100
     for i in range(0, len(docs), batch_size):
         batch_docs = docs[i:i + batch_size]
         batch_ids  = ids[i:i + batch_size]
         batch_meta = metadatas[i:i + batch_size]
 
-        response = openai_client.embeddings.create(
-            input=batch_docs,
-            model="text-embedding-3-small"
-        )
-        embeddings = [item.embedding for item in response.data]
-
         collection.upsert(
             ids=batch_ids,
             documents=batch_docs,
-            embeddings=embeddings,
             metadatas=batch_meta
+            # embeddings omitted — collection uses embed_fn automatically
         )
 
     return len(docs)

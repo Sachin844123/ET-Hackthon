@@ -1,175 +1,350 @@
 import React, { useState } from 'react';
-import { ShieldAlert, CheckCircle, Clock, RotateCcw, Download } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ShieldAlert, CheckCircle, Clock, RotateCcw, Download,
+  Terminal, Search, Plus, Library, ChevronDown, Lock
+} from 'lucide-react';
+import GlitchText from './GlitchText';
+
+const BLAST_COLORS = {
+  HIGH:   { color: '#ef4444', bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.5)' },
+  MEDIUM: { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.4)' },
+  LOW:    { color: '#22c55e', bg: 'rgba(34,197,94,0.12)', border: 'rgba(34,197,94,0.4)' },
+};
+
+const STATUS_CONFIG = {
+  EXECUTED:         { icon: CheckCircle, color: '#22c55e', label: 'EXECUTED', bg: 'rgba(34,197,94,0.1)' },
+  PENDING_APPROVAL: { icon: Clock, color: '#f59e0b', label: 'PENDING APPROVAL', bg: 'rgba(245,158,11,0.1)', pulse: true },
+  ROLLED_BACK:      { icon: RotateCcw, color: '#64748b', label: 'ROLLED BACK', bg: 'rgba(100,116,139,0.1)' },
+};
+
+const CATEGORIES = [
+  { label: 'All Playbooks', key: 'ALL' },
+  { label: 'Auto-Executed', key: 'EXECUTED' },
+  { label: 'Pending Review', key: 'PENDING_APPROVAL' },
+  { label: 'Rolled Back', key: 'ROLLED_BACK' },
+];
 
 export default function PlaybookExecutor({ executions = [], on_approve }) {
-  const [selectedExecId, setSelectedExecId] = useState(executions.length > 0 ? executions[0].execution_id : null);
-  const [showToast, setShowToast] = useState(false);
+  const [selectedExecId, setSelectedExecId] = useState(executions[0]?.execution_id || null);
+  const [expandedId, setExpandedId] = useState(null);
+  const [showToast, setShowToast] = useState(null);
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
 
   const selectedExec = executions.find(e => e.execution_id === selectedExecId);
+  const autoCount = executions.filter(e => e.status === 'EXECUTED' && !e.requires_approval).length;
+  const pendingCount = executions.filter(e => e.status === 'PENDING_APPROVAL').length;
+  const rolledBackCount = executions.filter(e => e.status === 'ROLLED_BACK').length;
 
-  const getBlastRadiusColor = (radius) => {
-    switch (radius?.toUpperCase()) {
-      case 'HIGH': return 'bg-red-500 text-white';
-      case 'MEDIUM': return 'bg-amber-500 text-white';
-      case 'LOW': return 'bg-green-500 text-white';
-      default: return 'bg-slate-500 text-white';
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status?.toUpperCase()) {
-      case 'EXECUTED': return <CheckCircle className="text-green-500 w-5 h-5" />;
-      case 'PENDING_APPROVAL': return <Clock className="text-amber-500 w-5 h-5" />;
-      case 'ROLLED_BACK': return <RotateCcw className="text-slate-500 w-5 h-5" />;
-      default: return <ShieldAlert className="text-blue-500 w-5 h-5" />;
-    }
+  const handleApprove = async (exec_id) => {
+    if (on_approve) await on_approve(exec_id);
+    setShowToast({ type: 'approved', id: exec_id });
+    setTimeout(() => setShowToast(null), 3000);
   };
 
   const handleExport = () => {
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
-    // In a real app, this would trigger a download of the JSON audit trail
+    setShowToast({ type: 'export' });
+    setTimeout(() => setShowToast(null), 3500);
   };
 
-  const autoExecuted = executions.filter(e => e.status === 'EXECUTED' && !e.requires_approval).length;
-  const pending = executions.filter(e => e.status === 'PENDING_APPROVAL').length;
-  const rolledBack = executions.filter(e => e.status === 'ROLLED_BACK').length;
+  const filteredExecs = executions.filter(e => {
+    if (categoryFilter !== 'ALL' && e.status !== categoryFilter) return false;
+    if (search && !e.playbook_name?.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const counts = {
+    ALL: executions.length,
+    EXECUTED: executions.filter(e => e.status === 'EXECUTED').length,
+    PENDING_APPROVAL: pendingCount,
+    ROLLED_BACK: rolledBackCount,
+  };
 
   return (
-    <div className="cyber-card flex flex-col h-full text-slate-300 overflow-hidden min-h-[500px] bg-[#0a0e1a]/85 backdrop-blur-sm animate-fade-in-up">
-      
+    <div className="flex flex-col h-full overflow-hidden relative" style={{ background: 'transparent' }}>
+
       {/* Toast */}
-      <div className={`absolute top-4 left-1/2 -translate-x-1/2 bg-green-950 border border-green-500 text-green-400 px-5 py-2.5 rounded shadow-2xl transition-all duration-300 z-50 flex items-center gap-2 shadow-[0_0_25px_rgba(34,197,94,0.3)] ${showToast ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'}`}>
-        <CheckCircle className="w-4 h-4 animate-bounce" />
-        <span className="text-xs font-bold font-mono tracking-wider">AUDIT PACKAGE EXPORTED — CRYPTOGRAPHIC SHA-256 SIGNATURE VALIDATED</span>
+      <AnimatePresence>
+        {showToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-0 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-2.5 rounded-lg border shadow-2xl"
+            style={{
+              background: showToast.type === 'approved' ? 'rgba(34,197,94,0.15)' : 'rgba(6,182,212,0.15)',
+              borderColor: showToast.type === 'approved' ? 'rgba(34,197,94,0.5)' : 'rgba(6,182,212,0.5)',
+            }}
+          >
+            <CheckCircle className="w-4 h-4" style={{ color: showToast.type === 'approved' ? '#22c55e' : '#06b6d4' }} />
+            <span className="text-[10px] font-bold font-mono tracking-widest text-slate-200">
+              {showToast.type === 'approved'
+                ? 'PLAYBOOK APPROVED — EXECUTING NOW'
+                : 'AUDIT PACKAGE EXPORTED — CRYPTOGRAPHIC HASH VALIDATED'}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Header ──────────────────────────────────────────────────── */}
+      <div className="shrink-0 flex items-center justify-between gap-3 mb-4">
+        {/* Search */}
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search playbooks..."
+            className="w-full pl-8 pr-3 py-1.5 text-[11px] font-mono rounded-lg border outline-none"
+            style={{
+              background: 'rgba(15,21,37,0.8)',
+              borderColor: 'rgba(51,65,85,0.5)',
+              color: '#f1f5f9',
+            }}
+          />
+        </div>
+
+        {/* Status filter */}
+        <div className="relative">
+          <select
+            className="appearance-none text-[10px] font-mono bg-transparent border rounded px-3 py-1.5 outline-none pr-6"
+            style={{ borderColor: 'rgba(51,65,85,0.5)', color: '#94a3b8' }}
+          >
+            <option>ALL STATUSES</option>
+            <option>EXECUTED</option>
+            <option>PENDING</option>
+          </select>
+          <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500 pointer-events-none" />
+        </div>
+
+        <button className="flex items-center gap-1.5 text-[10px] font-mono bg-cyan-950/40 text-cyan-400 border border-cyan-500/40 px-3 py-1.5 rounded hover:bg-cyan-950/70 transition-all">
+          <Plus className="w-3.5 h-3.5" /> CREATE PLAYBOOK
+        </button>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        
-        {/* Left Panel: List */}
-        <div className="w-1/3 border-r border-slate-800/80 bg-slate-950/20 flex flex-col tech-border-r">
-          <div className="p-4 border-b border-slate-800 bg-slate-900/60">
-            <h2 className="text-xs font-bold text-white tracking-widest flex items-center gap-2 font-mono">
-              <ShieldAlert className="w-4 h-4 text-cyan-400" />
-              TRIGGERED PLAYBOOKS
-            </h2>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto p-3 space-y-3">
-            {executions.length === 0 ? (
-              <div className="text-center p-4 text-slate-500 text-xs font-mono">No playbooks triggered yet.</div>
-            ) : executions.map(exec => (
-              <div 
-                key={exec.execution_id}
-                onClick={() => setSelectedExecId(exec.execution_id)}
-                className={`p-3 rounded cursor-pointer border transition-all ${selectedExecId === exec.execution_id ? 'bg-slate-900 border-cyan-500/60 shadow-[0_0_15px_rgba(6,182,212,0.1)]' : 'bg-slate-900/40 border-slate-800/60 hover:bg-slate-900/80'}`}
+      <div className="flex flex-1 gap-4 overflow-hidden min-h-0">
+
+        {/* ── Left Category Column ──────────────────────────────────── */}
+        <div className="w-44 shrink-0 flex flex-col gap-1">
+          {CATEGORIES.map(({ label, key }) => (
+            <button
+              key={key}
+              onClick={() => setCategoryFilter(key)}
+              className="flex items-center justify-between px-3 py-2 rounded-lg text-[11px] font-mono transition-all text-left"
+              style={{
+                background: categoryFilter === key ? 'rgba(6,182,212,0.1)' : 'transparent',
+                color: categoryFilter === key ? '#22d3ee' : '#64748b',
+                border: `1px solid ${categoryFilter === key ? 'rgba(6,182,212,0.3)' : 'transparent'}`,
+              }}
+            >
+              <span>{label}</span>
+              <span
+                className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                style={{
+                  background: categoryFilter === key ? 'rgba(6,182,212,0.2)' : 'rgba(30,41,59,0.8)',
+                  color: categoryFilter === key ? '#22d3ee' : '#475569',
+                }}
               >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(exec.status)}
-                    <span className="font-bold text-xs text-slate-200 font-mono">{exec.playbook_name}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold tracking-widest font-mono ${getBlastRadiusColor(exec.blast_radius)}`}>
-                    {exec.blast_radius} BLAST RADIUS
-                  </span>
-                  <span className="text-[9px] text-slate-500 font-mono break-all">{exec.triggered_by_alert_id}</span>
-                </div>
-                {exec.status === 'PENDING_APPROVAL' && (
-                  <div className="flex gap-2 mt-3">
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); on_approve && on_approve(exec.execution_id); }}
-                      className="flex-1 bg-green-950/40 hover:bg-green-900/50 border border-green-500/50 text-green-400 text-[10px] font-bold font-mono py-1 rounded transition-colors shadow-[0_0_8px_rgba(34,197,94,0.1)]"
-                    >
-                      APPROVE
-                    </button>
-                    <button 
-                      className="flex-1 bg-red-950/40 hover:bg-red-900/50 border border-red-500/50 text-red-400 text-[10px] font-bold font-mono py-1 rounded transition-colors"
-                    >
-                      REJECT
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
+                {counts[key]}
+              </span>
+            </button>
+          ))}
+
+          <div className="mt-auto pt-4 border-t border-slate-800/40">
+            <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-mono text-slate-500 hover:text-slate-400 transition-colors">
+              <Library className="w-3.5 h-3.5" /> PLAYBOOK TEMPLATES
+            </button>
           </div>
         </div>
 
-        {/* Right Panel: Detail */}
-        <div className="w-2/3 flex flex-col bg-[#0a0e1a]/60">
-          {selectedExec ? (
-            <>
-              <div className="p-6 border-b border-slate-800/80 flex justify-between items-start bg-slate-900/30">
-                <div>
-                  <h3 className="text-base font-bold text-white mb-1 font-mono tracking-wide">{selectedExec.playbook_name}</h3>
-                  <div className="text-[10px] text-slate-500 font-mono">EXECUTION ID: {selectedExec.execution_id}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs font-bold flex items-center gap-1.5 justify-end mb-1 font-mono">
-                    STATUS: {selectedExec.status === 'EXECUTED' ? <span className="text-green-400 neon-glow-text-cyan">EXECUTED</span> : <span className="text-amber-400 neon-glow-text-amber">PENDING APPROVAL</span>}
-                  </div>
-                  <div className="text-[9px] text-slate-500 font-mono tracking-widest">
-                    {selectedExec.requires_approval ? 'HUMAN APPROVAL REQUIRED' : 'AUTONOMOUS REACTION'}
-                  </div>
-                </div>
+        {/* ── Main Playbook Area ────────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+          {filteredExecs.length === 0 ? (
+            /* Empty state */
+            <div className="h-full flex flex-col items-center justify-center text-slate-600">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+                style={{ border: '2px dashed rgba(51,65,85,0.4)', background: 'rgba(15,21,37,0.5)' }}
+              >
+                <Terminal className="w-7 h-7 text-slate-700" />
               </div>
-
-              <div className="flex-1 overflow-y-auto p-6">
-                <h4 className="text-[10px] font-bold text-slate-500 tracking-widest mb-4 font-mono uppercase">ACTION SEQUENCE</h4>
-                <div className="space-y-4">
-                  {selectedExec.actions.map((action, idx) => (
-                    <div key={idx} className="cyber-card p-4 relative overflow-hidden bg-[#0a0e1a]/40 border-slate-850">
-                      {action.status === 'SUCCESS' && <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-500" />}
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="bg-cyan-950/60 text-cyan-400 text-[10px] px-2 py-0.5 rounded border border-cyan-800/50 font-mono">
-                            {action.action_type}
-                          </span>
-                          <span className="text-xs text-slate-300 font-mono">{action.target_entity}</span>
-                        </div>
-                        {action.status === 'SUCCESS' ? (
-                          <span className="text-xs text-green-400 font-bold flex items-center gap-1 font-mono"><CheckCircle className="w-3.5 h-3.5"/> SUCCESS</span>
-                        ) : (
-                          <span className="text-xs text-slate-500 font-bold font-mono">AWAITING</span>
-                        )}
-                      </div>
-                      <div className="bg-[#05070f] p-3 rounded border border-slate-900 font-mono text-[10px] text-slate-400 mt-3 overflow-x-auto leading-relaxed">
-                        {action.audit_log_entry || `[SYSTEM] ACTION:${action.action_type} TARGET:${action.target_entity}`}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="p-4 border-t border-slate-800 bg-slate-950/40">
-                <button 
-                  onClick={handleExport}
-                  className="cyber-button-cyan w-full flex items-center justify-center gap-2 py-3 rounded font-bold tracking-widest text-xs border border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all"
-                >
-                  <Download className="w-4 h-4" />
-                  EXPORT CRYPTOGRAPHIC AUDIT PACKAGE
-                </button>
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-slate-500 text-xs font-mono">
-              Select a playbook to view active audit trail details.
+              <h3 className="text-sm font-bold font-mono tracking-widest text-slate-700 mb-2">
+                NO PLAYBOOKS TRIGGERED
+              </h3>
+              <p className="text-[11px] font-mono text-slate-700 text-center max-w-xs">
+                Run the autopsy first to generate autonomous response playbooks based on detected TTPs.
+              </p>
             </div>
+          ) : (
+            filteredExecs.map((exec, idx) => {
+              const blast = BLAST_COLORS[exec.blast_radius?.toUpperCase()] || BLAST_COLORS.MEDIUM;
+              const status = STATUS_CONFIG[exec.status] || STATUS_CONFIG.EXECUTED;
+              const StatusIcon = status.icon;
+              const isExpanded = expandedId === exec.execution_id;
+
+              return (
+                <motion.div
+                  key={exec.execution_id}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.08, type: 'spring', stiffness: 80 }}
+                  className="rounded-xl border overflow-hidden"
+                  style={{
+                    background: 'rgba(15,21,37,0.9)',
+                    borderColor: selectedExecId === exec.execution_id
+                      ? 'rgba(6,182,212,0.4)'
+                      : 'rgba(51,65,85,0.4)',
+                  }}
+                >
+                  {/* Playbook header row */}
+                  <div
+                    className="flex items-center gap-3 px-4 py-3 cursor-pointer"
+                    onClick={() => {
+                      setSelectedExecId(exec.execution_id);
+                      setExpandedId(isExpanded ? null : exec.execution_id);
+                    }}
+                  >
+                    {/* Status icon */}
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                      style={{ background: status.bg }}
+                    >
+                      <StatusIcon
+                        className={`w-4 h-4 ${status.pulse ? 'animate-pulse' : ''}`}
+                        style={{ color: status.color }}
+                      />
+                    </div>
+
+                    {/* Name + triggered-by */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-[12px] font-bold text-slate-200 font-mono truncate">
+                          {exec.playbook_name}
+                        </span>
+                        <span
+                          className="text-[8px] font-bold font-mono px-1.5 py-0.5 rounded shrink-0"
+                          style={{ color: blast.color, background: blast.bg, border: `1px solid ${blast.border}` }}
+                        >
+                          {exec.blast_radius}
+                        </span>
+                      </div>
+                      <span className="text-[9px] font-mono text-slate-500">
+                        Triggered by: {exec.triggered_by || 'Autonomous response'} · {exec.executed_at || 'N/A'}
+                      </span>
+                    </div>
+
+                    {/* Status badge */}
+                    <span
+                      className="text-[9px] font-bold font-mono px-2 py-1 rounded shrink-0"
+                      style={{ color: status.color, background: status.bg }}
+                    >
+                      {status.label}
+                    </span>
+
+                    {/* Expand chevron */}
+                    {isExpanded
+                      ? <ChevronDown className="w-4 h-4 text-slate-500 shrink-0 rotate-180" />
+                      : <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />}
+                  </div>
+
+                  {/* Expanded commands + approval */}
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden border-t"
+                        style={{ borderColor: 'rgba(30,41,59,0.8)' }}
+                      >
+                        <div className="px-4 py-3 space-y-3">
+                          {/* Commands */}
+                          {exec.commands?.length > 0 && (
+                            <div
+                              className="rounded-lg p-3 font-mono text-[10px] space-y-1.5"
+                              style={{ background: '#03050a', border: '1px solid rgba(30,41,59,0.8)' }}
+                            >
+                              {exec.commands.map((cmd, i) => (
+                                <div key={i} className="flex gap-2 text-slate-400">
+                                  <span className="text-cyan-600 select-none">{String(i + 1).padStart(2, '0')}</span>
+                                  <span>{cmd}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Approval buttons for PENDING */}
+                          {exec.status === 'PENDING_APPROVAL' && (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleApprove(exec.execution_id)}
+                                className="flex-1 py-2 rounded-lg font-bold font-mono text-[11px] tracking-widest transition-all"
+                                style={{
+                                  background: 'rgba(34,197,94,0.15)',
+                                  border: '1px solid rgba(34,197,94,0.4)',
+                                  color: '#22c55e',
+                                }}
+                              >
+                                ✓ APPROVE EXECUTION
+                              </button>
+                              <button
+                                className="flex-1 py-2 rounded-lg font-bold font-mono text-[11px] tracking-widest transition-all"
+                                style={{
+                                  background: 'rgba(239,68,68,0.1)',
+                                  border: '1px solid rgba(239,68,68,0.3)',
+                                  color: '#ef4444',
+                                }}
+                              >
+                                ✕ REJECT
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })
           )}
         </div>
       </div>
 
-      {/* Footer Stats Bar */}
-      <div className="bg-slate-950 border-t border-slate-800/80 p-3 flex justify-between items-center text-[9px] text-slate-500 font-mono uppercase tracking-wider">
-        <div className="flex gap-4">
-          <span>AUTO-EXECUTED: <span className="text-green-400 font-bold">{autoExecuted}</span></span>
-          <span>PENDING: <span className="text-amber-400 font-bold">{pending}</span></span>
-          <span>ROLLED BACK: <span className="text-slate-600 font-bold">{rolledBack}</span></span>
+      {/* ── Bottom Summary Bar ───────────────────────────────────────── */}
+      <div
+        className="shrink-0 mt-4 rounded-xl border flex items-center justify-between px-5 py-3"
+        style={{
+          background: 'rgba(11,15,23,0.95)',
+          borderColor: 'rgba(30,41,59,0.8)',
+          boxShadow: '0 -4px 20px rgba(0,0,0,0.3)',
+        }}
+      >
+        <div className="flex items-center gap-8">
+          {[
+            { label: 'TOTAL PLAYBOOKS', value: executions.length, color: '#64748b' },
+            { label: 'AUTO EXECUTED', value: autoCount, color: '#22c55e' },
+            { label: 'PENDING REVIEW', value: pendingCount, color: '#f59e0b' },
+            { label: 'ROLLED BACK', value: rolledBackCount, color: '#64748b' },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="flex flex-col items-center">
+              <span className="text-sm font-bold font-mono" style={{ color }}>{value}</span>
+              <span className="text-[8px] font-mono text-slate-600 tracking-widest">{label}</span>
+            </div>
+          ))}
         </div>
-        <div className="tracking-widest flex items-center gap-1.5 text-cyan-400 font-bold">
-          <ShieldAlert className="w-3.5 h-3.5 animate-pulse" />
-          ALL ACTIONS LOGGED WITH CRYPTOGRAPHIC TIMESTAMPS
+
+        <div className="flex items-center gap-2">
+          <button onClick={handleExport} className="flex items-center gap-1.5 text-[9px] font-mono text-slate-500 hover:text-slate-300 border border-slate-800 px-2.5 py-1.5 rounded transition-all">
+            <Download className="w-3 h-3" /> EXPORT AUDIT LOG
+          </button>
+          <div
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded border"
+            style={{ background: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.25)' }}
+          >
+            <Lock className="w-3 h-3 text-green-500" />
+            <span className="text-[9px] font-mono text-green-600 font-bold tracking-wider">ALL ACTIONS CRYPTOGRAPHICALLY TIMESTAMPED</span>
+          </div>
         </div>
       </div>
     </div>

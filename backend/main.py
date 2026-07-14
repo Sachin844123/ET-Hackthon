@@ -547,3 +547,69 @@ async def demo_aiims_live():
         yield f"data: {json.dumps({'step': 'complete', 'agent': 'Orchestrator', 'status': 'complete', 'progress': 100, 'result': result_data}, default=str)}\n\n"
 
     return StreamingResponse(sse_generator(), media_type="text/event-stream")
+
+@app.post("/api/demo/cbse/live")
+async def demo_cbse_live():
+    """
+    Re-runs the full 5-agent LangGraph pipeline for CBSE 2026 via SSE.
+    Falls back to cached result on failures so the demo is always reliable.
+    """
+    cbse_incident = IncidentInput(
+        incident_id="cbse_2026",
+        name="CBSE Data Theft 2026",
+        description="Retroactive reconstruction of the CBSE student data exfiltration incident.",
+        affected_hosts=[
+            "CBSE-WEB-SRV-01", "CBSE-DB-PRIMARY-01",
+            "CBSE-ADMIN-SRV-01", "CBSE-FILE-SRV-03"
+        ],
+        timeframe_start=datetime(2026, 1, 1, tzinfo=None),
+        timeframe_end=datetime(2026, 1, 22, tzinfo=None),
+        mode="RETROACTIVE",
+    )
+
+    queue: asyncio.Queue = asyncio.Queue(maxsize=200)
+
+    def stream_callback(update: dict) -> None:
+        try:
+            queue.put_nowait(update)
+        except asyncio.QueueFull:
+            pass
+
+    async def sse_generator():
+        orchestrator = get_orchestrator()
+
+        pipeline_task = asyncio.create_task(
+            orchestrator.run(cbse_incident, stream_callback=stream_callback)
+        )
+
+        while not pipeline_task.done() or not queue.empty():
+            try:
+                update = await asyncio.wait_for(queue.get(), timeout=0.5)
+                yield f"data: {json.dumps(update, default=str)}\n\n"
+            except asyncio.TimeoutError:
+                continue
+
+        try:
+            result = await pipeline_task
+            autopsy_runs[result.autopsy_id] = result
+            result_data = result.model_dump(mode="json")
+
+            try:
+                with open(settings.CBSE_CACHE_FILE, "w") as f:
+                    json.dump(result_data, f, default=str)
+            except Exception as e:
+                logger.warning("Failed to write CBSE cache: %s", e)
+
+        except Exception as exc:
+            logger.error("Live CBSE pipeline failed: %s — serving cached result", exc)
+            if os.path.exists(settings.CBSE_CACHE_FILE):
+                with open(settings.CBSE_CACHE_FILE, "r") as f:
+                    result_data = json.load(f)
+                result_data["autopsy_id"] = f"auto_live_{uuid.uuid4().hex[:8]}"
+                result_data["run_timestamp"] = datetime.utcnow().isoformat()
+            else:
+                result_data = {}
+
+        yield f"data: {json.dumps({'step': 'complete', 'agent': 'Orchestrator', 'status': 'complete', 'progress': 100, 'result': result_data}, default=str)}\n\n"
+
+    return StreamingResponse(sse_generator(), media_type="text/event-stream")
