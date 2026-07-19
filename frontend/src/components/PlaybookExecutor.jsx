@@ -105,15 +105,18 @@ export default function PlaybookExecutor({ executions = [], on_approve }) {
           />
         </div>
 
-        {/* Status filter */}
+        {/* Status filter - connected to categoryFilter state */}
         <div className="relative">
           <select
             className="appearance-none text-[10px] font-mono bg-transparent border rounded px-3 py-1.5 outline-none pr-6"
             style={{ borderColor: 'rgba(51,65,85,0.5)', color: '#94a3b8' }}
+            value={categoryFilter}
+            onChange={e => setCategoryFilter(e.target.value)}
           >
-            <option>ALL STATUSES</option>
-            <option>EXECUTED</option>
-            <option>PENDING</option>
+            <option value="ALL">ALL STATUSES</option>
+            <option value="EXECUTED">EXECUTED</option>
+            <option value="PENDING_APPROVAL">PENDING</option>
+            <option value="ROLLED_BACK">ROLLED BACK</option>
           </select>
           <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500 pointer-events-none" />
         </div>

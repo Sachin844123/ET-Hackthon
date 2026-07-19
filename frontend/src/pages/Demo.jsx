@@ -81,14 +81,23 @@ export default function Demo() {
 
     try {
       const response = await fetch(scenarioCfg.endpoint, { method: 'POST' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
+      let buffer = '';
 
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value);
-        for (const line of chunk.split('\n\n')) {
+        buffer += decoder.decode(value, { stream: true });
+
+        // Process all complete SSE events (separated by double-newline)
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop(); // keep last incomplete chunk
+
+        for (const part of parts) {
+          const line = part.trim();
           if (!line.startsWith('data: ')) continue;
           try {
             const data = JSON.parse(line.slice(6));
@@ -97,14 +106,14 @@ export default function Demo() {
               setIsComplete(true);
               setIsRunning(false);
               setAlertCount(data.result.retroactive_alerts?.length || 0);
-            } else {
+            } else if (data.step) {
               setProgressSteps(prev => {
                 const idx = prev.findIndex(s => s.step === data.step);
                 if (idx >= 0) { const n = [...prev]; n[idx] = data; return n; }
                 return [...prev, data];
               });
             }
-          } catch { /* ignore parse errors */ }
+          } catch { /* ignore JSON parse errors for non-data lines */ }
         }
       }
     } catch (err) {
@@ -328,7 +337,15 @@ export default function Demo() {
                 transition={{ duration: 0.25 }}
                 className="h-full overflow-y-auto"
               >
-              {!isComplete && !isRunning && activeTab !== 'attack-graph' ? (
+              {/* Attack graph always renders (has its own empty state) */}
+              {activeTab === 'attack-graph' ? (
+                <AttackPathDiagram
+                  graph_nodes={autopsyResult?.graph_nodes || []}
+                  graph_edges={autopsyResult?.graph_edges || []}
+                  incident_id={autopsyResult?.incident_id || 'aiims_2022'}
+                  autopsyResult={autopsyResult}
+                />
+              ) : !isComplete && !isRunning ? (
                   /* Empty state */
                   <div className="h-full flex flex-col items-center justify-center text-slate-600">
                     <div
@@ -344,7 +361,7 @@ export default function Demo() {
                       Select scenario target and trigger simulation replay.
                     </p>
                   </div>
-                ) : isRunning && !isComplete && activeTab !== 'attack-graph' ? (
+                ) : isRunning && !isComplete ? (
                   /* Running state */
                   <div className="h-full flex flex-col items-center justify-center gap-6">
                     <div className="relative">
@@ -387,14 +404,6 @@ export default function Demo() {
                       <div className="p-4 h-full">
                         <AttackChainTimeline autopsy_result={autopsyResult} />
                       </div>
-                    )}
-                    {activeTab === 'attack-graph' && (
-                      <AttackPathDiagram
-                        graph_nodes={autopsyResult?.graph_nodes || []}
-                        graph_edges={autopsyResult?.graph_edges || []}
-                        incident_id={autopsyResult?.incident_id || 'aiims_2022'}
-                        autopsyResult={autopsyResult}
-                      />
                     )}
                     {activeTab === 'alert-timeline' && (
                       <div className="p-4 h-full">

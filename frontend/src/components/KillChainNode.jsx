@@ -29,7 +29,7 @@ export default function KillChainNode({
   if (!stage) return null;
   const Icon = stage.icon;
 
-  const sizes = {
+  const SIZE_CONFIGS = {
     compact: {
       wrap: 'w-28 p-2',
       icon: 'w-8 h-8 p-1.5',
@@ -54,9 +54,9 @@ export default function KillChainNode({
       idText: 'text-[9px]',
       nameText: 'text-[10px]',
     },
-  }[size] || sizes.full;
+  };
 
-  const s = sizes;
+  const s = SIZE_CONFIGS[size] || SIZE_CONFIGS.full;
 
   return (
     <div

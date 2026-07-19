@@ -1,21 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, ChevronRight, Download, ExternalLink, Info } from 'lucide-react';
-import { KILL_CHAIN_STAGES, getStageByTactic } from '../constants/killChain';
+import { KILL_CHAIN_STAGES, getStageByTactic, getStageByTechniqueId } from '../constants/killChain';
 import { useMitreLookup, prefetchTechniques } from '../hooks/useMitreLookup';
 import GlitchText from './GlitchText';
 
-const PHASE_LABEL_MAP = {
-  'Initial Access': 'initial-access',
-  'Execution': 'execution',
-  'Persistence': 'persistence',
-  'Privilege Escalation': 'privilege-escalation',
-  'Defense Evasion': 'defense-evasion',
-  'Lateral Movement': 'lateral-movement',
-  'Collection': 'collection',
-  'Command and Control': 'exfiltration',
-  'Impact': 'impact',
-};
 
 const AIIMS_DEMO_TIMELINE = [
   { day: 1, tValue: 'T-21', techniqueId: 'T1078', confidence: 0.73 },
@@ -188,11 +177,10 @@ export default function AttackChainTimeline({ autopsy_result }) {
             const hasData = stageTtps.length > 0 || stageAlert !== null;
             const isImpact = stage.id === 'impact';
 
-            // Demo timeline pin
-            const demoPin = AIIMS_DEMO_TIMELINE.find(d => {
-              const s = getStageByTactic(d.techniqueId);
-              return s?.id === stage.id;
-            }) || null;
+            // Demo timeline pin — use technique-ID based lookup (not tactic)
+            const demoPin = AIIMS_DEMO_TIMELINE.find(d =>
+              getStageByTechniqueId(d.techniqueId)?.id === stage.id
+            ) || null;
             const detectedConf = stageAlert?.confidence ?? demoPin?.confidence ?? null;
 
             return (
@@ -312,17 +300,17 @@ export default function AttackChainTimeline({ autopsy_result }) {
                         </motion.div>
                       ))
                     ) : (
-                      /* Dashed empty card */
+                      /* Empty state placeholder */
                       <div
-                        className="rounded-lg p-2 flex flex-col items-center justify-center gap-1"
+                        className="rounded-lg p-3 flex flex-col items-center justify-center gap-1.5"
                         style={{
-                          background: 'transparent',
-                          border: '1px dashed rgba(51,65,85,0.3)',
-                          minHeight: '56px',
+                          background: 'rgba(15,21,37,0.4)',
+                          border: '1px dashed rgba(51,65,85,0.35)',
+                          minHeight: '60px',
                         }}
                       >
-                        <span className="text-slate-700 text-lg">+</span>
-                        <span className="text-[8px] font-mono text-slate-700">NO TTPs DETECTED</span>
+                        <Shield className="w-4 h-4" style={{ color: 'rgba(71,85,105,0.4)' }} />
+                        <span className="text-[8px] font-mono tracking-wider" style={{ color: 'rgba(71,85,105,0.6)' }}>NO TTPs DETECTED</span>
                       </div>
                     )}
                   </AnimatePresence>
@@ -346,23 +334,31 @@ export default function AttackChainTimeline({ autopsy_result }) {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.8 }}
-        className="shrink-0 grid grid-cols-5 gap-px mt-3"
-        style={{ background: 'rgba(30,41,59,0.3)', borderRadius: '12px', overflow: 'hidden' }}
+        className="shrink-0 grid grid-cols-5 gap-px mt-4"
+        style={{
+          background: 'rgba(30,41,59,0.25)',
+          borderRadius: '16px',
+          overflow: 'hidden',
+          border: '1px solid rgba(30,41,59,0.5)',
+        }}
       >
         {[
-          { label: 'TOTAL DURATION', value: `${totalDuration} DAYS`, color: '#64748b' },
+          { label: 'TOTAL DURATION', value: `${totalDuration} DAYS`, color: '#94a3b8' },
           { label: 'CONTAINED BEFORE IMPACT', value: prevention > 0 ? 'YES' : 'NO', color: prevention > 0 ? '#22c55e' : '#ef4444' },
           { label: 'ATTACK COMPLETION', value: '100%', color: '#ef4444' },
           { label: 'TOTAL ALERTS', value: totalAlerts, color: '#06b6d4' },
           { label: 'RESPONSE TIME', value: `T-${prevention} DAYS`, color: '#f59e0b' },
-        ].map(({ label, value, color }) => (
+        ].map(({ label, value, color }, i) => (
           <div
             key={label}
-            className="text-center py-3 px-2"
-            style={{ background: 'rgba(15,21,37,0.9)', borderRight: '1px solid rgba(30,41,59,0.6)' }}
+            className="text-center py-3.5 px-3"
+            style={{
+              background: 'rgba(15,21,37,0.85)',
+              borderRight: i < 4 ? '1px solid rgba(30,41,59,0.5)' : 'none',
+            }}
           >
-            <div className="font-mono text-xs font-bold mb-0.5" style={{ color }}>{value}</div>
-            <div className="text-[8px] font-mono text-slate-600 tracking-widest">{label}</div>
+            <div className="font-mono text-sm font-bold mb-1" style={{ color, textShadow: `0 0 10px ${color}30` }}>{value}</div>
+            <div className="text-[8px] font-mono tracking-widest" style={{ color: 'rgba(100,116,139,0.7)' }}>{label}</div>
           </div>
         ))}
       </motion.div>

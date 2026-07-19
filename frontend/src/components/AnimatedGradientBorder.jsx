@@ -1,5 +1,11 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 
+/**
+ * AnimatedGradientBorder
+ * Uses a canvas-free CSS conic-gradient animation.
+ * The `@property --gradient-angle` + `@keyframes gradient-rotate` are defined
+ * globally in index.css. This component just wires the inline style.
+ */
 export default function AnimatedGradientBorder({
   children,
   className = '',
@@ -10,7 +16,8 @@ export default function AnimatedGradientBorder({
   glowIntensity = 0.3,
 }) {
   const gradientColors = colors.join(', ');
-  
+  const animDuration = `${speed}s`;
+
   return (
     <div
       className={`animated-gradient-border-wrapper ${className}`}
@@ -21,32 +28,32 @@ export default function AnimatedGradientBorder({
         isolation: 'isolate',
       }}
     >
-      {/* Animated gradient border */}
+      {/* Animated gradient border layer */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
           borderRadius: `${borderRadius}px`,
           background: `conic-gradient(from var(--gradient-angle, 0deg), ${gradientColors})`,
-          animation: `gradient-rotate ${speed}s linear infinite`,
-          opacity: 0.8,
+          animation: `gradient-rotate ${animDuration} linear infinite`,
+          opacity: 0.85,
           zIndex: -2,
         }}
       />
-      {/* Glow effect */}
+      {/* Glow layer */}
       <div
         style={{
           position: 'absolute',
           inset: `-${borderWidth * 4}px`,
           borderRadius: `${borderRadius + 4}px`,
           background: `conic-gradient(from var(--gradient-angle, 0deg), ${gradientColors})`,
-          animation: `gradient-rotate ${speed}s linear infinite`,
+          animation: `gradient-rotate ${animDuration} linear infinite`,
           opacity: glowIntensity,
           filter: `blur(${borderWidth * 8}px)`,
           zIndex: -3,
         }}
       />
-      {/* Inner content area */}
+      {/* Inner content */}
       <div
         style={{
           borderRadius: `${borderRadius - borderWidth}px`,

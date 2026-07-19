@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import Particles from '@tsparticles/react';
+import React, { useCallback, useMemo } from 'react';
+import Particles, { ParticlesProvider } from '@tsparticles/react';
 import { loadSlim } from '@tsparticles/slim';
 
 export default function ParticleBackground({ variant = 'default' }) {
@@ -7,7 +7,11 @@ export default function ParticleBackground({ variant = 'default' }) {
     await loadSlim(engine);
   }, []);
 
-  const configs = {
+  const particlesLoaded = useCallback(async (container) => {
+    // container is ready — nothing needed here
+  }, []);
+
+  const configs = useMemo(() => ({
     default: {
       fullScreen: false,
       background: { color: { value: 'transparent' } },
@@ -92,19 +96,23 @@ export default function ParticleBackground({ variant = 'default' }) {
       },
       detectRetina: true,
     },
-  };
+  }), []);
+
+  const activeConfig = configs[variant] || configs.default;
 
   return (
-    <Particles
-      id={`tsparticles-${variant}`}
-      init={particlesInit}
-      options={configs[variant] || configs.default}
-      style={{
-        position: 'absolute',
-        inset: 0,
-        zIndex: 0,
-        pointerEvents: 'auto',
-      }}
-    />
+    <ParticlesProvider init={particlesInit}>
+      <Particles
+        id={`tsparticles-${variant}`}
+        particlesLoaded={particlesLoaded}
+        options={activeConfig}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 0,
+          pointerEvents: 'auto',
+        }}
+      />
+    </ParticlesProvider>
   );
 }

@@ -95,6 +95,8 @@ class RetroactivePredictionAgent:
         cb = progress_cb or self._progress_cb
         incident_id = (incident.incident_id or "").lower()
         incident_date = incident.timeframe_end  # Actual breach / discovery date
+        if incident_date and incident_date.tzinfo is None:
+            incident_date = incident_date.replace(tzinfo=timezone.utc)
 
         self._emit(cb, "retroactive", "running", "Sorting events chronologically", 5)
 

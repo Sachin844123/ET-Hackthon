@@ -119,8 +119,12 @@ function AttackNode({ node, x, y, stage, techName, detected, active, isImpact, o
   );
 }
 
+// Module-level counter for unique arrow marker IDs
+let _arrowCounter = 0;
+
 function Arrow({ x1, y1, x2, y2, color = '#334155', dashed = false, curved = false }) {
-  const id = `arr-${Math.round(x1)}-${Math.round(y1)}-${Math.round(x2)}-${Math.round(y2)}`;
+  const idRef = useRef(`arr-${++_arrowCounter}`);
+  const id = idRef.current;
   let d;
   if (curved) {
     const cx = (x1 + x2) / 2;

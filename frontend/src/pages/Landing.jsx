@@ -193,21 +193,27 @@ export default function Landing() {
         </div>
 
         {/* Center links */}
-        <div className="hidden lg:flex items-center gap-6 text-[11px] font-medium text-slate-500 tracking-wide">
+        <div className="hidden lg:flex items-center gap-8 text-[10px] font-mono tracking-widest uppercase">
           {['Platform', 'Capabilities', 'AI Agents', 'Threat Intel', 'Resources'].map(l => (
-            <button key={l} className="hover:text-slate-300 transition-colors">{l}</button>
+            <button
+              key={l}
+              className="text-slate-500 hover:text-cyan-400 transition-colors duration-200 relative py-1 group"
+            >
+              {l}
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-cyan-400 transition-all duration-200 group-hover:w-full" />
+            </button>
           ))}
         </div>
 
         {/* Right: status pills */}
-        <div className="hidden lg:flex items-center gap-3">
+        <div className="hidden lg:flex items-center gap-4">
           {[
             { label: 'NEO4J', color: '#22c55e' },
             { label: 'MITRE', color: '#06b6d4' },
             { label: 'STIX', color: '#a855f7' },
           ].map(({ label, color }) => (
-            <div key={label} className="flex items-center gap-1.5 text-[9px] font-bold font-mono">
-              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: color }} />
+            <div key={label} className="flex items-center gap-1.5 text-[9px] font-bold font-mono tracking-wider">
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
               <span style={{ color }}>{label}: ONLINE</span>
             </div>
           ))}
@@ -268,22 +274,23 @@ export default function Landing() {
 
             {/* CTAs */}
             <motion.div
-              className="flex items-center gap-3"
+              className="flex items-center gap-4"
               initial={{ opacity: 0, y: 12 }}
               animate={show ? { opacity: 1, y: 0 } : {}}
               transition={{ delay: 0.7 }}
             >
               <motion.button
                 onClick={() => navigate('/demo')}
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
-                className="flex items-center gap-2.5 px-7 py-3.5 rounded-xl font-bold text-white text-sm"
+                whileHover={{ scale: 1.03, boxShadow: '0 0 28px rgba(239,68,68,0.55)' }}
+                whileTap={{ scale: 0.97 }}
+                className="flex items-center gap-2 px-6 py-3.5 rounded-xl font-mono text-xs tracking-wider uppercase font-bold text-white transition-all duration-300"
                 style={{
-                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 60%, #b91c1c 100%)',
-                  boxShadow: '0 0 24px rgba(239,68,68,0.4), 0 4px 16px rgba(0,0,0,0.3)',
+                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  boxShadow: '0 0 20px rgba(239,68,68,0.3)',
+                  border: '1px solid rgba(239,68,68,0.5)',
                 }}
               >
-                <Zap className="w-4 h-4" />
+                <Zap className="w-4 h-4 fill-white" />
                 Launch Platform
                 <motion.span animate={{ x: [0, 4, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
                   <ArrowRight className="w-4 h-4" />
@@ -291,17 +298,23 @@ export default function Landing() {
               </motion.button>
 
               <motion.button
-                whileHover={{ scale: 1.03 }}
+                whileHover={{
+                  scale: 1.03,
+                  borderColor: 'rgba(255,255,255,0.8)',
+                  color: '#ffffff',
+                  backgroundColor: 'rgba(255,255,255,0.03)',
+                }}
                 whileTap={{ scale: 0.97 }}
-                className="flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold text-sm"
+                className="flex items-center gap-2 px-6 py-3.5 rounded-xl font-mono text-xs tracking-wider uppercase font-bold text-slate-400 transition-all duration-300"
                 style={{
                   border: '1.5px solid rgba(51,65,85,0.7)',
-                  color: '#94a3b8',
+                  background: 'transparent',
                 }}
               >
                 Watch Demo
               </motion.button>
             </motion.div>
+
 
             {/* 4-icon strip */}
             <motion.div
