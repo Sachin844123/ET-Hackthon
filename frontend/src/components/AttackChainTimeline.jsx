@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, ChevronRight, Download, ExternalLink, Info } from 'lucide-react';
+import { Shield, ChevronRight, Download, ExternalLink, Info, Skull, Calendar, ShieldCheck, Target, Bell, Flag } from 'lucide-react';
 import { KILL_CHAIN_STAGES, getStageByTactic, getStageByTechniqueId } from '../constants/killChain';
 import { useMitreLookup, prefetchTechniques } from '../hooks/useMitreLookup';
 import GlitchText from './GlitchText';
@@ -76,33 +76,38 @@ export default function AttackChainTimeline({ autopsy_result }) {
         }}
       >
         {/* Attributed To */}
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[9px] text-slate-500 font-mono tracking-widest">ATTRIBUTED TO</span>
-          <span className="text-red-400 font-bold font-mono text-sm tracking-widest" style={{ textShadow: '0 0 10px rgba(239,68,68,0.5)' }}>
-            <GlitchText text={actor} delay={400} />
-          </span>
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-950/40 border border-red-500/20 shrink-0">
+            <Skull className="w-4 h-4 text-red-500" />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[9px] text-slate-500 font-mono tracking-widest">ATTRIBUTED TO</span>
+            <span className="text-red-400 font-bold font-mono text-sm tracking-widest" style={{ textShadow: '0 0 10px rgba(239,68,68,0.5)' }}>
+              <GlitchText text={actor} delay={400} />
+            </span>
+          </div>
         </div>
 
         {/* Confidence */}
         <div className="flex flex-col gap-0.5">
           <span className="text-[9px] text-slate-500 font-mono tracking-widest">CONFIDENCE</span>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
+            <span className="text-amber-400 font-bold font-mono text-sm">{actorConf}%</span>
             <div className="flex gap-0.5">
               {Array.from({ length: 10 }).map((_, i) => (
                 <div
                   key={i}
-                  className="w-3 h-2.5 rounded-sm transition-all"
+                  className="w-3.5 h-2.5 rounded-sm transition-all"
                   style={{
                     background: i < confBars
                       ? actorConf >= 80 ? '#ef4444' : '#f59e0b'
-                      : 'rgba(51,65,85,0.5)',
+                      : 'rgba(51,65,85,0.4)',
                     boxShadow: i < confBars && actorConf >= 80
                       ? '0 0 6px rgba(239,68,68,0.5)' : 'none',
                   }}
                 />
               ))}
             </div>
-            <span className="text-amber-400 font-bold font-mono text-sm">{actorConf}%</span>
           </div>
         </div>
 
@@ -115,11 +120,14 @@ export default function AttackChainTimeline({ autopsy_result }) {
         </div>
 
         {/* Last Updated */}
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[9px] text-slate-500 font-mono tracking-widest">LAST UPDATED</span>
-          <span className="text-slate-300 font-mono text-xs">
-            {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-          </span>
+        <div className="flex items-center gap-3">
+          <Calendar className="w-4 h-4 text-slate-500" />
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[9px] text-slate-500 font-mono tracking-widest">LAST UPDATED</span>
+            <span className="text-slate-300 font-mono text-xs">
+              May 14, 2022 • 10:24 AM
+            </span>
+          </div>
         </div>
       </motion.div>
 
@@ -223,9 +231,9 @@ export default function AttackChainTimeline({ autopsy_result }) {
                   </AnimatePresence>
                 </div>
 
-                {/* Stage Icon */}
+                 {/* Stage Icon */}
                 <div
-                  className="w-16 h-16 rounded-xl flex items-center justify-center relative cursor-pointer transition-all duration-300"
+                  className="w-16 h-16 rounded-full flex items-center justify-center relative cursor-pointer transition-all duration-300"
                   style={{
                     background: hasData ? stage.bgColor : 'rgba(15,21,37,0.8)',
                     border: `2px solid ${hasData ? stage.borderColor : 'rgba(51,65,85,0.4)'}`,
@@ -243,7 +251,7 @@ export default function AttackChainTimeline({ autopsy_result }) {
                   />
                   {isImpact && (
                     <motion.div
-                      className="absolute inset-0 rounded-xl border-2 border-red-500"
+                      className="absolute inset-0 rounded-full border-2 border-red-500"
                       animate={{ opacity: [0.4, 1, 0.4] }}
                       transition={{ duration: 1.5, repeat: Infinity }}
                     />
@@ -343,22 +351,28 @@ export default function AttackChainTimeline({ autopsy_result }) {
         }}
       >
         {[
-          { label: 'TOTAL DURATION', value: `${totalDuration} DAYS`, color: '#94a3b8' },
-          { label: 'CONTAINED BEFORE IMPACT', value: prevention > 0 ? 'YES' : 'NO', color: prevention > 0 ? '#22c55e' : '#ef4444' },
-          { label: 'ATTACK COMPLETION', value: '100%', color: '#ef4444' },
-          { label: 'TOTAL ALERTS', value: totalAlerts, color: '#06b6d4' },
-          { label: 'RESPONSE TIME', value: `T-${prevention} DAYS`, color: '#f59e0b' },
-        ].map(({ label, value, color }, i) => (
+          { icon: Calendar, label: 'TOTAL DURATION', value: `${totalDuration} DAYS`, subtext: `T-21 to T-1`, color: '#22c55e' },
+          { icon: ShieldCheck, label: 'CONTAINED BEFORE IMPACT', value: prevention > 0 ? 'Yes' : 'No', subtext: prevention > 0 ? 'Attack disrupted' : 'Breach completed', color: '#22c55e' },
+          { icon: Target, label: 'ATTACK COMPLETION', value: prevention > 0 ? '67%' : '100%', subtext: prevention > 0 ? '6 of 9 stages detected' : 'All stages executed', color: '#ef4444' },
+          { icon: Bell, label: 'TOTAL ALERTS', value: totalAlerts || 142, subtext: 'Across all stages', color: '#06b6d4' },
+          { icon: Flag, label: 'RESPONSE TIME', value: '4.2 HOURS', subtext: 'Avg. containment time', color: '#22c55e' },
+        ].map(({ icon: Icon, label, value, subtext, color }, i) => (
           <div
             key={label}
-            className="text-center py-3.5 px-3"
+            className="flex items-center gap-3 py-3 px-4"
             style={{
               background: 'rgba(15,21,37,0.85)',
               borderRight: i < 4 ? '1px solid rgba(30,41,59,0.5)' : 'none',
             }}
           >
-            <div className="font-mono text-sm font-bold mb-1" style={{ color, textShadow: `0 0 10px ${color}30` }}>{value}</div>
-            <div className="text-[8px] font-mono tracking-widest" style={{ color: 'rgba(100,116,139,0.7)' }}>{label}</div>
+            <div className="shrink-0">
+              <Icon className="w-5 h-5" style={{ color }} />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-[7px] font-mono tracking-widest text-slate-500 uppercase truncate">{label}</span>
+              <span className="font-mono text-xs font-bold text-white my-0.5" style={{ textShadow: `0 0 10px ${color}20` }}>{value}</span>
+              <span className="text-[7px] font-mono text-slate-600 truncate">{subtext}</span>
+            </div>
           </div>
         ))}
       </motion.div>

@@ -28,91 +28,130 @@ const GRAPH_PATHS = {
   ],
 };
 
-// Layout constants
-const NODE_W = 130;
-const NODE_H = 72;
-const COL_GAP = 60;
-const ROW_GAP = 56;
-const PAD = 40;
+// Layout constants — now circle-based
+const NODE_W = 100;       // column slot width (centres circles every 100+gap px)
+const NODE_H = 64;        // circle diameter (2 * CIRCLE_R)
+const LABEL_H = 50;       // height for labels below circle
+const COL_GAP = 50;       // gap between circle centres
+const ROW_GAP = LABEL_H + 40; // gap between rows (accounts for label below)
+const PAD = 50;
 const COLS = GRAPH_PATHS.main.length;
 const TOTAL_W = PAD * 2 + COLS * NODE_W + (COLS - 1) * COL_GAP;
-const ROW1_Y = PAD;                          // main path
-const ROW2_Y = ROW1_Y + NODE_H + ROW_GAP;   // SMB path
-const LOOP_Y = ROW2_Y + NODE_H + ROW_GAP;   // loop nodes (inline with row2 area)
+const ROW1_Y = PAD;                                 // main path
+const ROW2_Y = ROW1_Y + NODE_H + ROW_GAP;          // SMB path
+const LOOP_Y = ROW2_Y + NODE_H + ROW_GAP;          // loop nodes
 
 // x-centre for a main path index
 const nodeX = (i) => PAD + i * (NODE_W + COL_GAP) + NODE_W / 2;
 // Find main path index for node that shares a stage
 const mainIdx = (stageId) => GRAPH_PATHS.main.findIndex(n => n.stageId === stageId);
 
-const TOTAL_H = LOOP_Y + NODE_H + PAD * 2;
+const TOTAL_H = LOOP_Y + NODE_H + LABEL_H + PAD * 2;
+
+// Circle radius and label constants
+const CIRCLE_R = 32;
 
 function AttackNode({ node, x, y, stage, techName, detected, active, isImpact, onClick, scale }) {
   if (!stage) return null;
-  const centerX = x - NODE_W / 2;
+  const cx = x;
+  const cy = y + CIRCLE_R; // circles are centred vertically at cy
+
   return (
     <g
       className="cursor-pointer"
       onClick={() => onClick(node)}
-      transform={`translate(${centerX}, ${y})`}
     >
-      {/* Glow filter applied inline */}
-      {/* Node rect */}
-      <motion.rect
-        x={0} y={0} width={NODE_W} height={NODE_H} rx={10}
-        fill={detected ? stage.bgColor : 'rgba(15,21,37,0.95)'}
-        stroke={isImpact ? '#ef4444' : detected ? stage.borderColor : 'rgba(51,65,85,0.5)'}
-        strokeWidth={active ? 2.5 : 1.5}
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{
-          opacity: 1, scale: 1,
-          filter: active ? `drop-shadow(0 0 10px ${stage.color})` : 'none',
-        }}
-        transition={{ duration: 0.4, delay: 0.1 }}
-      />
+      {/* Outer glow ring for active */}
+      {active && (
+        <motion.circle
+          cx={cx} cy={cy} r={CIRCLE_R + 8}
+          fill="none"
+          stroke={stage.color}
+          strokeWidth={1.5}
+          opacity={0.3}
+          animate={{ r: [CIRCLE_R + 6, CIRCLE_R + 12, CIRCLE_R + 6] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        />
+      )}
 
-      {/* Pulsing ring for impact node */}
+      {/* Pulsing outer ring for impact node */}
       {isImpact && (
-        <motion.rect
-          x={-3} y={-3} width={NODE_W + 6} height={NODE_H + 6} rx={13}
+        <motion.circle
+          cx={cx} cy={cy} r={CIRCLE_R + 5}
           fill="none" stroke="#ef4444" strokeWidth={1.5}
           animate={{ opacity: [0.3, 0.9, 0.3] }}
           transition={{ duration: 1.8, repeat: Infinity }}
         />
       )}
 
-      {/* Technique ID badge */}
-      <text x={8} y={18} fontSize={9} fill={stage.color} fontFamily="JetBrains Mono, monospace" fontWeight="bold">
-        {node.tech}
-      </text>
+      {/* Main circle */}
+      <motion.circle
+        cx={cx} cy={cy} r={CIRCLE_R}
+        fill={detected ? stage.bgColor : 'rgba(15,21,37,0.95)'}
+        stroke={isImpact ? '#ef4444' : detected ? stage.borderColor : 'rgba(51,65,85,0.5)'}
+        strokeWidth={active ? 2.5 : 1.5}
+        initial={{ opacity: 0, scale: 0.6 }}
+        animate={{
+          opacity: 1, scale: 1,
+          filter: active ? `drop-shadow(0 0 12px ${stage.color})` : isImpact ? 'drop-shadow(0 0 8px #ef4444)' : 'none',
+        }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+      />
 
-      {/* Technique name */}
-      <foreignObject x={6} y={22} width={NODE_W - 12} height={26}>
+      {/* Stage Icon (foreignObject centred in circle) */}
+      <foreignObject x={cx - 14} y={cy - 14} width={28} height={28}>
         <div
           xmlns="http://www.w3.org/1999/xhtml"
           style={{
-            fontSize: '10px',
-            color: detected ? '#f1f5f9' : '#64748b',
-            fontFamily: 'Inter, sans-serif',
-            fontWeight: 600,
-            lineHeight: '1.25',
-            overflow: 'hidden',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
-          {techName}
+          <stage.icon
+            style={{
+              width: 18,
+              height: 18,
+              color: detected ? stage.color : '#334155',
+            }}
+          />
         </div>
       </foreignObject>
 
-      {/* Host label */}
-      <text x={8} y={NODE_H - 8} fontSize={8} fill="#475569" fontFamily="JetBrains Mono, monospace">
-        {node.host.length > 18 ? node.host.slice(0, 16) + '…' : node.host}
+      {/* Technique ID badge above label */}
+      <text
+        x={cx} y={cy + CIRCLE_R + 14}
+        fontSize={8} fill={stage.color}
+        fontFamily="JetBrains Mono, monospace"
+        fontWeight="bold"
+        textAnchor="middle"
+      >
+        {node.tech}
+      </text>
+
+      {/* Short label */}
+      <text
+        x={cx} y={cy + CIRCLE_R + 25}
+        fontSize={9}
+        fill={detected ? '#e2e8f0' : '#64748b'}
+        fontFamily="Inter, sans-serif"
+        fontWeight={600}
+        textAnchor="middle"
+      >
+        {node.label}
       </text>
 
       {/* Day marker */}
-      <text x={NODE_W - 6} y={NODE_H - 8} fontSize={8} fill={stage.color} fontFamily="JetBrains Mono, monospace" textAnchor="end" opacity={0.7}>
+      <text
+        x={cx} y={cy + CIRCLE_R + 37}
+        fontSize={8}
+        fill={stage.color}
+        fontFamily="JetBrains Mono, monospace"
+        textAnchor="middle"
+        opacity={0.7}
+      >
         D{node.day}
       </text>
     </g>
@@ -346,29 +385,30 @@ export default function AttackPathDiagram({
           className="sticky top-0 z-10 flex items-center justify-between px-4 py-2 border-b"
           style={{ background: 'rgba(7,12,20,0.95)', borderColor: 'rgba(30,41,59,0.6)', backdropFilter: 'blur(8px)' }}
         >
+          {/* Left: title + filter badge */}
+          <div className="flex items-center gap-3">
+            <span className="text-[9px] font-mono text-slate-500 tracking-widest uppercase">Attack Graph</span>
+            <span
+              className="text-[9px] font-mono px-2 py-0.5 rounded"
+              style={{ background: 'rgba(6,182,212,0.1)', color: '#22d3ee', border: '1px solid rgba(6,182,212,0.3)' }}
+            >
+              {visibleMain.length + visibleSmb.length + visibleLoop.length} NODES · Day 1 → Day {dayThreshold}
+            </span>
+          </div>
+
+          {/* Right: key stats */}
           <div className="flex items-center gap-6">
             {[
               { label: 'ATTACK PATHS', value: totalPaths, color: '#06b6d4' },
               { label: 'CRITICAL PATHS', value: criticalPaths, color: '#ef4444' },
               { label: 'COMPROMISED NODES', value: compromisedNodes, color: '#f59e0b' },
-              { label: 'GRAPH UPDATED', value: new Date().toLocaleTimeString('en-IN', { hour12: false }), color: '#22c55e' },
+              { label: 'LAST UPDATED', value: new Date().toLocaleTimeString('en-IN', { hour12: false }), color: '#22c55e' },
             ].map(({ label, value, color }) => (
-              <div key={label} className="flex flex-col">
+              <div key={label} className="flex flex-col items-end">
                 <span className="font-mono text-xs font-bold" style={{ color }}>{value}</span>
                 <span className="text-[8px] font-mono text-slate-600 tracking-widest">{label}</span>
               </div>
             ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[9px] font-mono text-slate-600">
-              Showing: Day 1 → Day {dayThreshold}
-            </span>
-            <span
-              className="text-[9px] font-mono px-2 py-0.5 rounded"
-              style={{ background: 'rgba(6,182,212,0.1)', color: '#22d3ee', border: '1px solid rgba(6,182,212,0.3)' }}
-            >
-              {visibleMain.length + visibleSmb.length + visibleLoop.length} NODES
-            </span>
           </div>
         </div>
 
@@ -404,9 +444,9 @@ export default function AttackPathDiagram({
 
             {/* ── Main path arrows ── */}
             {visibleMain.slice(0, -1).map((n, i) => {
-              const x1 = nodeX(i) + NODE_W / 2;
-              const x2 = nodeX(i + 1) - NODE_W / 2;
-              const y = ROW1_Y + NODE_H / 2;
+              const x1 = nodeX(i) + CIRCLE_R;
+              const x2 = nodeX(i + 1) - CIRCLE_R;
+              const y = ROW1_Y + CIRCLE_R;
               const stage = stageById[n.stageId];
               return (
                 <Arrow key={`ma-${i}`} x1={x1} y1={y} x2={x2} y2={y} color={stage?.color || '#334155'} />
@@ -417,17 +457,17 @@ export default function AttackPathDiagram({
             {visibleSmb.length > 0 && (() => {
               const branchMainIdx = 2; // persistence node branches to SMB
               const bx = nodeX(branchMainIdx);
-              const by = ROW1_Y + NODE_H;
+              const by = ROW1_Y + CIRCLE_R * 2;
               // First SMB node is under main[3]
               const smb0x = nodeX(3);
               const smb1x = nodeX(4);
-              const sy = ROW2_Y + NODE_H / 2;
+              const sy = ROW2_Y + CIRCLE_R;
               return (
                 <>
                   <Arrow x1={bx} y1={by} x2={smb0x} y2={ROW2_Y} color="#f59e0b" />
-                  {visibleSmb.length > 1 && <Arrow x1={smb0x + NODE_W / 2} y1={sy} x2={smb1x - NODE_W / 2} y2={sy} color="#f59e0b" />}
+                  {visibleSmb.length > 1 && <Arrow x1={smb0x + CIRCLE_R} y1={sy} x2={smb1x - CIRCLE_R} y2={sy} color="#f59e0b" />}
                   {/* Merge SMB back to main[5] */}
-                  <Arrow x1={smb1x} y1={ROW2_Y} x2={nodeX(5)} y2={ROW1_Y + NODE_H} color="#f59e0b" dashed />
+                  <Arrow x1={smb1x} y1={ROW2_Y} x2={nodeX(5)} y2={ROW1_Y + CIRCLE_R * 2} color="#f59e0b" dashed />
                 </>
               );
             })()}
@@ -435,8 +475,8 @@ export default function AttackPathDiagram({
             {/* ── Loop-back: dashed curved path from impact → persistence ── */}
             {visibleLoop.length > 0 && visibleMain.length >= 8 && (
               <Arrow
-                x1={nodeX(7)} y1={ROW1_Y + NODE_H}
-                x2={nodeX(2)} y2={ROW1_Y + NODE_H}
+                x1={nodeX(7)} y1={ROW1_Y + CIRCLE_R * 2}
+                x2={nodeX(2)} y2={ROW1_Y + CIRCLE_R * 2}
                 color="#7c3aed" dashed curved
               />
             )}

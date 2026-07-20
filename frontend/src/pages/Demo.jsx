@@ -213,26 +213,7 @@ export default function Demo() {
             ))}
           </div>
 
-          {/* Bell */}
-          <div className="relative cursor-pointer">
-            <Bell className="w-4 h-4 text-slate-400 hover:text-white transition-colors" />
-            {alertCount > 0 && (
-              <span
-                className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[8px] font-bold font-mono flex items-center justify-center"
-                style={{ background: '#ef4444', color: '#fff' }}
-              >
-                {alertCount > 9 ? '9+' : alertCount}
-              </span>
-            )}
-          </div>
 
-          {/* Avatar */}
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold font-mono cursor-pointer"
-            style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff' }}
-          >
-            SS
-          </div>
         </div>
       </header>
 
@@ -268,8 +249,8 @@ export default function Demo() {
           </div>
         </div>
 
-        {/* Left Panel — SystemControllerPanel (hidden on attack-graph, Tab 2 has its own) */}
-        {activeTab !== 'attack-graph' && (
+        {/* Left Panel — SystemControllerPanel (hidden on attack-graph and kill-chain) */}
+        {activeTab !== 'attack-graph' && activeTab !== 'kill-chain' && (
           <div
             className="w-72 shrink-0 overflow-y-auto border-r"
             style={{
