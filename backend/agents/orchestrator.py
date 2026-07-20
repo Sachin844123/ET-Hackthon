@@ -91,13 +91,15 @@ class AttackChainOrchestrator:
         neo4j_driver: Any = None,
         chroma_collection: Any = None,
         openai_client: Any = None,
-        anthropic_api_key: Optional[str] = None,
+        anthropic_api_key: Optional[str] = None,  # kept for backward-compat; ignored
+        groq_api_key: Optional[str] = None,
         sqlite_path: str = "./data/cache/autopsy.db",
     ) -> None:
         self._driver     = neo4j_driver
         self._chroma     = chroma_collection
         self._openai     = openai_client
-        self._api_key    = anthropic_api_key or os.getenv("ANTHROPIC_API_KEY", "")
+        # Groq is the primary LLM provider (no budget for Claude)
+        self._groq_key   = groq_api_key or os.getenv("GROQ_API_KEY", "")
         self._sqlite     = sqlite_path
         self._mitre      = MITREAttackClient()
 
@@ -114,7 +116,7 @@ class AttackChainOrchestrator:
         self._attribution  = TTAttributionAgent(
             neo4j_driver=neo4j_driver,
             mitre_client=self._mitre,
-            anthropic_api_key=self._api_key,
+            groq_api_key=self._groq_key,
         )
         self._retroactive  = RetroactivePredictionAgent()
         self._response     = AutonomousResponseAgent(
@@ -284,6 +286,9 @@ class AttackChainOrchestrator:
         """
         Node 3 — TTAttributionAgent.
         Maps anomalies to MITRE ATT&CK techniques and attributes to a threat actor.
+        Actor attribution comes from Claude's real response (stored on the agent
+        after map_anomalies_to_ttps() returns). Falls back to a hardcoded APT41
+        stub only when Claude is unreachable — which is logged as a WARNING.
         """
         self._push_progress(state, "attribution_node", "running", 45,
                              "Mapping behaviours to MITRE ATT&CK...")
@@ -296,8 +301,10 @@ class AttackChainOrchestrator:
                 anomalies, events
             )
 
-            # Extract actor attribution from Claude result (stored in agent)
-            actor_attribution = self._build_actor_attribution(ttp_attributions)
+            # Read real actor attribution returned by Claude (or fallback if unavailable)
+            actor_attribution = self._attribution.get_last_actor_attribution(
+                ttp_attributions
+            )
 
             self._push_progress(
                 state,
@@ -378,6 +385,7 @@ class AttackChainOrchestrator:
         anomaly_scores   = state.get("anomaly_scores", [])
         ttp_attributions = state.get("ttp_attributions", [])
         incident         = state["incident"]
+        incident_id      = (incident.incident_id or "").lower()
         executions: list[PlaybookExecution] = []
 
         try:
@@ -395,7 +403,9 @@ class AttackChainOrchestrator:
                     recommended_action="",
                     would_have_prevented_breach=False,
                 )
-                execution = await self._response.evaluate_and_respond(alert)
+                execution = await self._response.evaluate_and_respond(
+                    alert, incident_id=incident_id
+                )
                 if execution:
                     executions.append(execution)
 
@@ -614,32 +624,6 @@ class AttackChainOrchestrator:
                 pass
 
         logger.info("[%s] %s%% — %s", step.upper(), progress, summary)
-
-    @staticmethod
-    def _build_actor_attribution(
-        ttp_attributions: list[TTPAttribution],
-    ) -> Optional[ThreatActorAttribution]:
-        """
-        Build a ThreatActorAttribution from the AIIMS fallback data.
-        In a full implementation this is populated from Claude's response.
-        """
-        if not ttp_attributions:
-            return None
-
-        return ThreatActorAttribution(
-            actor_name="APT41",
-            actor_id="apt41",
-            confidence=0.84,
-            ttp_overlap_count=len(ttp_attributions),
-            campaign_match="Operation Dark Ward (2022)",
-            predicted_next_ttps=["T1486", "T1490", "T1491"],
-            recommended_defensive_actions=[
-                "Emergency backup of all clinical systems",
-                "Block outbound traffic on 10.0.8.0/24",
-                "Force-rotate all domain admin credentials",
-                "Notify CERT-In per IT Act Section 70B",
-            ],
-        )
 
     @staticmethod
     def _compute_kill_chain_coverage(

@@ -6,10 +6,13 @@ Agent 3 — TTAttributionAgent
 Responsibilities:
   • Pattern-match anomaly clusters to MITRE ATT&CK techniques using a
     signature dictionary (no LLM call — deterministic, fast)
-  • Call Claude Sonnet 4.6 for final attribution + actor identification +
-    next-TTP predictions
+  • Call Groq (llama-3.3-70b-versatile) for final attribution + actor
+    identification + next-TTP predictions
   • Build TTPAttribution Pydantic objects for all confirmed techniques
   • Query actor profiles from Neo4j or the MITRE stub database
+
+LLM Provider: Groq (FREE tier) — set GROQ_API_KEY in .env
+  Fallback: deterministic APT41 pattern when no key is set.
 """
 
 from __future__ import annotations
@@ -23,7 +26,8 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any, Callable, Optional
 
-import anthropic
+import anthropic  # kept for type-compat; not used when Groq is primary
+from openai import OpenAI as GroqClient  # Groq uses OpenAI-compatible SDK
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from backend.mitre.attck_client import MITREAttackClient
@@ -141,8 +145,11 @@ STAGE_NAMES = {
     9: "Impact",
 }
 
-# Claude model string (per system context)
-CLAUDE_MODEL = "claude-sonnet-4-6"
+# Groq model for LLM attribution (free tier — no budget needed)
+GROQ_MODEL = "llama-3.3-70b-versatile"
+
+# Legacy constant kept so references don't break
+CLAUDE_MODEL = GROQ_MODEL
 
 # Cluster window: events within this many hours are considered one cluster
 CLUSTER_WINDOW_HOURS = 24
@@ -151,31 +158,39 @@ CLUSTER_WINDOW_HOURS = 24
 class TTAttributionAgent:
     """
     Maps behavioural anomalies to MITRE ATT&CK TTPs and threat actors.
-    Uses pattern matching for speed and Claude Sonnet for final attribution.
+    Uses pattern matching for speed and Groq LLM for final attribution.
+    LLM Provider: Groq (llama-3.3-70b-versatile) via OpenAI-compatible SDK.
+    Set GROQ_API_KEY in .env.  Falls back to deterministic stub if unset.
     """
 
     def __init__(
         self,
         neo4j_driver: Any = None,
         mitre_client: Optional[MITREAttackClient] = None,
-        anthropic_api_key: Optional[str] = None,
+        anthropic_api_key: Optional[str] = None,  # kept for backward-compat; unused
+        groq_api_key: Optional[str] = None,
         progress_callback: Optional[Callable[[dict], None]] = None,
     ) -> None:
         self._driver      = neo4j_driver
         self._mitre       = mitre_client or MITREAttackClient()
         self._progress_cb = progress_callback
-        self._llm_provider = os.getenv("LLM_PROVIDER", "anthropic").lower()
-        
-        if self._llm_provider == "groq":
-            import openai
-            groq_key = os.getenv("GROQ_API_KEY", "")
-            self._llm_client = openai.OpenAI(
-                api_key=groq_key,
-                base_url="https://api.groq.com/openai/v1"
-            ) if groq_key else None
+        self._llm_provider = "groq"  # always Groq; Claude removed per budget constraints
+
+        _key = groq_api_key or os.getenv("GROQ_API_KEY", "")
+        if _key:
+            self._llm_client: Optional[GroqClient] = GroqClient(
+                api_key=_key,
+                base_url="https://api.groq.com/openai/v1",
+            )
         else:
-            self._api_key = anthropic_api_key or os.getenv("ANTHROPIC_API_KEY", "")
-            self._llm_client = anthropic.Anthropic(api_key=self._api_key) if self._api_key else None
+            self._llm_client = None
+            logger.warning(
+                "GROQ_API_KEY not set — TTAttributionAgent will use "
+                "deterministic fallback (no live LLM calls)."
+            )
+
+        # Populated by map_anomalies_to_ttps(); read by get_last_actor_attribution()
+        self._last_actor_attribution: Optional[dict[str, Any]] = None
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -246,14 +261,14 @@ class TTAttributionAgent:
                 }
             )
 
-        self._emit_progress("attribution", "running", "Calling Claude Sonnet for final attribution", 60)
+        self._emit_progress("attribution", "running", "Calling Groq for final attribution", 60)
 
-        # Build context for Claude
+        # Build context for LLM
         behavior_summary = self._build_behavior_summary(high_anomalies, event_map)
         actor_data = self._build_actor_data()
 
-        # Call Claude for final attribution + actor identification
-        claude_result = await self._claude_attribution(
+        # Call Groq for final attribution + actor identification
+        claude_result = await self._llm_attribution(
             behavior_summary=behavior_summary,
             pattern_matches=pattern_matches,
             actor_data=actor_data,
@@ -262,6 +277,15 @@ class TTAttributionAgent:
         # Merge Claude results into attributions
         final_attributions = self._merge_claude_results(
             all_attributions, claude_result
+        )
+
+        # Store actor_attribution from Claude so the orchestrator can read it
+        # via get_last_actor_attribution() instead of using a hardcoded stub.
+        self._last_actor_attribution = claude_result.get("actor_attribution")
+        actor_name = (
+            self._last_actor_attribution.get("name", "Unknown")
+            if self._last_actor_attribution
+            else "Unknown"
         )
 
         self._emit_progress(
@@ -274,10 +298,70 @@ class TTAttributionAgent:
         logger.info(
             "Attribution complete: %d techniques, actor=%s",
             len(final_attributions),
-            claude_result.get("actor_attribution", {}).get("name", "Unknown"),
+            actor_name,
         )
 
         return sorted(final_attributions, key=lambda t: t.kill_chain_stage)
+
+    def get_last_actor_attribution(
+        self,
+        ttp_attributions: list[TTPAttribution],
+    ) -> Optional[ThreatActorAttribution]:
+        """
+        Build a ThreatActorAttribution from the actor_attribution dict that
+        Claude returned during the most recent map_anomalies_to_ttps() call.
+
+        Falls back to a hardcoded AIIMS-specific stub ONLY if:
+          - Claude was not called (no API key), OR
+          - Claude returned no actor_attribution data.
+
+        When the fallback fires, a WARNING is logged so it is always visible.
+        """
+        if not ttp_attributions:
+            return None
+
+        raw = self._last_actor_attribution
+        if raw and raw.get("name"):
+            return ThreatActorAttribution(
+                actor_name=raw["name"],
+                actor_id=raw["name"].lower().replace(" ", "_"),
+                confidence=float(raw.get("confidence", 0.5)),
+                ttp_overlap_count=len(ttp_attributions),
+                campaign_match=raw.get("campaign_match") or None,
+                predicted_next_ttps=[
+                    t["id"] for t in self._last_actor_attribution.get(  # type: ignore[union-attr]
+                        "predicted_next_ttps", []
+                    )
+                    if t.get("id")
+                ],
+                recommended_defensive_actions=[
+                    t.get("defensive_action", "")
+                    for t in self._last_actor_attribution.get(  # type: ignore[union-attr]
+                        "predicted_next_ttps", []
+                    )
+                    if t.get("defensive_action")
+                ],
+            )
+
+        # Fallback — Claude was unavailable or returned empty actor data
+        logger.warning(
+            "actor_attribution: Claude did not return actor data; using "
+            "hardcoded AIIMS/APT41 fallback. Set ANTHROPIC_API_KEY for live attribution."
+        )
+        return ThreatActorAttribution(
+            actor_name="APT41",
+            actor_id="apt41",
+            confidence=0.84,
+            ttp_overlap_count=len(ttp_attributions),
+            campaign_match="Operation Dark Ward (2022)",
+            predicted_next_ttps=["T1486", "T1490", "T1491"],
+            recommended_defensive_actions=[
+                "Emergency backup of all clinical systems",
+                "Block outbound traffic on 10.0.8.0/24",
+                "Force-rotate all domain admin credentials",
+                "Notify CERT-In per IT Act Section 70B",
+            ],
+        )
 
     async def get_actor_profile(self, actor_name: str) -> dict[str, Any]:
         """
@@ -479,21 +563,22 @@ class TTAttributionAgent:
 
         return matches
 
-    # ── Claude integration ────────────────────────────────────────────────────
+    # ── Groq LLM integration (replaces Claude) ────────────────────────────────
 
-    async def _claude_attribution(
+    async def _llm_attribution(
         self,
         behavior_summary: str,
         pattern_matches: list[dict[str, Any]],
         actor_data: str,
     ) -> dict[str, Any]:
         """
-        Call Claude Sonnet 4.6 with the full attribution prompt.
-        Returns parsed JSON or a fallback structure if Claude is unavailable.
+        Call Groq (llama-3.3-70b-versatile) with the full attribution prompt.
+        Returns parsed JSON or a fallback structure if Groq is unavailable.
+        Groq uses the OpenAI-compatible API so no extra SDK is needed.
         """
         if not self._llm_client:
             logger.warning(
-                f"{self._llm_provider} client not initialised (API key missing). "
+                "Groq client not initialised (GROQ_API_KEY missing). "
                 "Returning deterministic fallback attribution."
             )
             return self._fallback_attribution()
@@ -534,26 +619,16 @@ Return ONLY valid JSON matching this schema:
 }}"""
 
         try:
-            if self._llm_provider == "groq":
-                response = await asyncio.get_event_loop().run_in_executor(
-                    None,
-                    lambda: self._llm_client.chat.completions.create(
-                        model="llama-3.3-70b-versatile",
-                        messages=[{"role": "user", "content": prompt}],
-                        temperature=0.1
-                    )
-                )
-                raw = response.choices[0].message.content.strip()
-            else:
-                response = await asyncio.get_event_loop().run_in_executor(
-                    None,
-                    lambda: self._llm_client.messages.create(
-                        model=CLAUDE_MODEL,
-                        max_tokens=2048,
-                        messages=[{"role": "user", "content": prompt}],
-                    ),
-                )
-                raw = response.content[0].text.strip()
+            response = await asyncio.get_running_loop().run_in_executor(
+                None,
+                lambda: self._llm_client.chat.completions.create(
+                    model=GROQ_MODEL,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.1,
+                    max_tokens=2048,
+                ),
+            )
+            raw = response.choices[0].message.content.strip()
 
             # Strip markdown code fences if present
             if raw.startswith("```"):
@@ -564,7 +639,7 @@ Return ONLY valid JSON matching this schema:
 
             result = json.loads(raw)
             logger.info(
-                "Claude attribution: actor=%s, techniques=%d",
+                "Groq attribution: actor=%s, techniques=%d",
                 result.get("actor_attribution", {}).get("name", "Unknown"),
                 len(result.get("confirmed_techniques", [])),
             )

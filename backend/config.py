@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     # API Keys
     ANTHROPIC_API_KEY: str = "sk-ant-placeholder"
     OPENAI_API_KEY: str = "sk-openai-placeholder"
+    GROQ_API_KEY: str = "gsk_placeholder"
 
     # Databases
     NEO4J_URI: str = "bolt://localhost:7687"

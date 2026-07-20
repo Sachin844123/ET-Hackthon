@@ -26,7 +26,7 @@ import logging
 import os
 import re
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -101,7 +101,7 @@ class LogIngestionAgent:
           3. Enrich each event with risk_indicators
           4. Batch-persist: Chroma embeddings + Neo4j nodes/edges
         """
-        start_ts = datetime.utcnow()
+        start_ts = datetime.now(timezone.utc)
         result = IngestionResult(incident_id=incident_id)
         all_events: list[SecurityEvent] = []
 
@@ -163,7 +163,7 @@ class LogIngestionAgent:
             result.neo4j_edges_created += edges_created
 
         result.entities_discovered = list(entities)
-        result.duration_seconds = (datetime.utcnow() - start_ts).total_seconds()
+        result.duration_seconds = (datetime.now(timezone.utc) - start_ts).total_seconds()
 
         self._emit_progress(
             step="ingest",
@@ -386,7 +386,7 @@ class LogIngestionAgent:
         for event in events:
             try:
                 # 1. Upsert source entity
-                await asyncio.get_event_loop().run_in_executor(
+                await asyncio.get_running_loop().run_in_executor(
                     None,
                     lambda e=event: self._neo4j_write(
                         """
@@ -406,7 +406,7 @@ class LogIngestionAgent:
                 nodes_created += 1
 
                 # 2. Upsert destination entity
-                await asyncio.get_event_loop().run_in_executor(
+                await asyncio.get_running_loop().run_in_executor(
                     None,
                     lambda e=event: self._neo4j_write(
                         """
@@ -426,7 +426,7 @@ class LogIngestionAgent:
                 nodes_created += 1
 
                 # 3. Upsert SecurityEvent node
-                await asyncio.get_event_loop().run_in_executor(
+                await asyncio.get_running_loop().run_in_executor(
                     None,
                     lambda e=event: self._neo4j_write(
                         """
@@ -453,7 +453,7 @@ class LogIngestionAgent:
 
                 # 4. Create edge: source → dest
                 edge_type = self._infer_edge_type(event)
-                await asyncio.get_event_loop().run_in_executor(
+                await asyncio.get_running_loop().run_in_executor(
                     None,
                     lambda e=event, et=edge_type: self._neo4j_write(
                         f"""

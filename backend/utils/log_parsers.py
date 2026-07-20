@@ -2,7 +2,7 @@ import json
 import os
 import re
 import math
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from backend.models.schemas import SecurityEvent
 
@@ -114,45 +114,64 @@ def detect_risk_indicators(event: dict) -> List[str]:
     return list(set(indicators))
 
 def parse_synthetic_json(file_path: str) -> List[SecurityEvent]:
-    """Parse synthetic JSON logs into Pydantic SecurityEvents."""
+    """Parse synthetic JSON logs into Pydantic SecurityEvents.
+
+    Errors are logged (not silently swallowed) so operators can diagnose bad
+    log files.  Per-item parse failures skip the bad record and continue
+    processing the rest of the file.
+    """
+    import logging as _logging
+    _log = _logging.getLogger("autopsy.log_parsers")
+
     events = []
     if not os.path.exists(file_path):
+        _log.warning("parse_synthetic_json: file not found: %s", file_path)
         return events
-    
+
     with open(file_path, "r", encoding="utf-8") as f:
         try:
             data = json.load(f)
-            if not isinstance(data, list):
-                data = [data]
-            
-            for idx, item in enumerate(data):
-                # Generate a unique event_id if not present
-                event_id = item.get("event_id", f"evt_{os.path.basename(file_path)}_{idx}")
-                
-                # Extract source and destination
-                src = item.get("source_ip", item.get("host", "UNKNOWN"))
-                dst = item.get("dest_ip", item.get("dst_ip", "UNKNOWN"))
-                
-                # Detect risk indicators
-                indicators = detect_risk_indicators(item)
-                
-                # Create SecurityEvent
-                evt = SecurityEvent(
-                    event_id=str(event_id),
-                    timestamp=item.get("timestamp", datetime.utcnow().isoformat()),
-                    event_type=item.get("event_type", item.get("event_id", "GENERIC")),
-                    source_entity=src,
-                    dest_entity=dst,
-                    raw_log=json.dumps(item),
-                    parsed_fields=item,
-                    anomaly_score=item.get("baseline_deviation_score", 0.0),
-                    risk_indicators=indicators,
-                    mitre_technique_id=item.get("mitre_technique")
-                )
-                events.append(evt)
-        except Exception as e:
-            # Return empty or log error
-            pass
+        except json.JSONDecodeError as exc:
+            _log.error("parse_synthetic_json: invalid JSON in %s — %s", file_path, exc)
+            return events
+
+    if not isinstance(data, list):
+        data = [data]
+
+    for idx, item in enumerate(data):
+        try:
+            # Generate a unique event_id if not present
+            event_id = item.get("event_id", f"evt_{os.path.basename(file_path)}_{idx}")
+
+            # Extract source and destination
+            src = item.get("source_ip", item.get("host", "UNKNOWN"))
+            dst = item.get("dest_ip", item.get("dst_ip", "UNKNOWN"))
+
+            # Detect risk indicators
+            indicators = detect_risk_indicators(item)
+
+            # Create SecurityEvent
+            evt = SecurityEvent(
+                event_id=str(event_id),
+                timestamp=item.get("timestamp", datetime.now(timezone.utc).isoformat()),
+                event_type=item.get("event_type", item.get("event_id", "GENERIC")),
+                source_entity=src,
+                dest_entity=dst,
+                raw_log=json.dumps(item),
+                parsed_fields=item,
+                anomaly_score=item.get("baseline_deviation_score", 0.0),
+                risk_indicators=indicators,
+                mitre_technique_id=item.get("mitre_technique"),
+            )
+            events.append(evt)
+        except Exception as exc:
+            _log.warning(
+                "parse_synthetic_json: skipping item %d in %s — %s",
+                idx,
+                file_path,
+                exc,
+            )
+
     return events
 
 def parse_windows_event_log(file_path: str) -> List[SecurityEvent]:

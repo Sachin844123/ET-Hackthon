@@ -3,7 +3,7 @@ import json
 import logging
 import uuid
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from fastapi import FastAPI, UploadFile, File, Query, HTTPException, Request, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -41,9 +41,24 @@ app = FastAPI(
 )
 
 # CORS configuration
+# Allow the Vite dev server (port 5173) and common Docker/production origins.
+# Never use allow_origins=["*"] because allow_credentials=True requires an
+# explicit origin list for CORS preflight to work correctly.
+_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",   # kept for backwards-compat during transition
+    "http://127.0.0.1:3000",
+    "http://localhost:8080",
+    "http://frontend:5173",    # docker service name
+]
+_extra_origin = os.getenv("CORS_ORIGIN", "").strip()
+if _extra_origin:
+    _ALLOWED_ORIGINS.append(_extra_origin)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -70,7 +85,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={
             "error": str(exc),
             "request_id": request_id,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
     )
 
@@ -169,7 +184,7 @@ def get_orchestrator() -> AttackChainOrchestrator:
     if _orchestrator is None:
         _orchestrator = AttackChainOrchestrator(
             neo4j_driver=get_neo4j_driver(),
-            anthropic_api_key=settings.ANTHROPIC_API_KEY,
+            groq_api_key=settings.GROQ_API_KEY,
             sqlite_path=os.path.join(settings.CACHE_DIR, "autopsy.db"),
         )
     return _orchestrator
@@ -408,7 +423,7 @@ async def approve_playbook(execution_id: str):
         for act in pb.actions:
             act.status = "SUCCESS"
         pb.audit_trail.append({
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "action": "Playbook approved and executed by admin"
         })
         return pb
@@ -425,17 +440,17 @@ async def approve_playbook(execution_id: str):
                 action_type="FIREWALL_BLOCK",
                 target_entity="AIIMS-PATIENT-MGMT-01",
                 status="SUCCESS",
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 reversible=True,
                 audit_log_entry=(
-                    f"[{datetime.utcnow().isoformat()}Z] ACTION:FIREWALL_BLOCK "
+                    f"[{datetime.now(timezone.utc).isoformat()}Z] ACTION:FIREWALL_BLOCK "
                     "TARGET:AIIMS-PATIENT-MGMT-01 TRIGGERED_BY:alert_day03_001 "
                     "CONFIDENCE:0.8100 EXECUTED_BY:SYSTEM_AUTO BLAST_RADIUS:MEDIUM"
                 )
             )
         ],
         status="EXECUTED",
-        audit_trail=[{"timestamp": datetime.utcnow().isoformat(), "action": "Approved by Administrator"}]
+        audit_trail=[{"timestamp": datetime.now(timezone.utc).isoformat(), "action": "Approved by Administrator"}]
     )
     playbooks[execution_id] = mock_pb
     return mock_pb
@@ -444,7 +459,7 @@ async def approve_playbook(execution_id: str):
 async def export_audit(autopsy_id: str):
     return {
         "autopsy_id": autopsy_id,
-        "exported_at": datetime.utcnow().isoformat(),
+        "exported_at": datetime.now(timezone.utc).isoformat(),
         "integrity_hash": uuid.uuid4().hex,
         "trail": [
             {"timestamp": "2026-07-04T12:00:00Z", "agent": "LogIngestionAgent", "action": "Parsed raw baseline_logs"},
@@ -540,7 +555,7 @@ async def demo_aiims_live():
                 with open(settings.AIIMS_CACHE_FILE, "r") as f:
                     result_data = json.load(f)
                 result_data["autopsy_id"] = f"auto_live_{uuid.uuid4().hex[:8]}"
-                result_data["run_timestamp"] = datetime.utcnow().isoformat()
+                result_data["run_timestamp"] = datetime.now(timezone.utc).isoformat()
             else:
                 result_data = {}
 
@@ -606,7 +621,7 @@ async def demo_cbse_live():
                 with open(settings.CBSE_CACHE_FILE, "r") as f:
                     result_data = json.load(f)
                 result_data["autopsy_id"] = f"auto_live_{uuid.uuid4().hex[:8]}"
-                result_data["run_timestamp"] = datetime.utcnow().isoformat()
+                result_data["run_timestamp"] = datetime.now(timezone.utc).isoformat()
             else:
                 result_data = {}
 

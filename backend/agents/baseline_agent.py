@@ -141,7 +141,9 @@ class BehavioralBaselineAgent:
                 entity_id, ent_events, baseline_period_days
             )
             baselines[entity_id] = baseline
-            await self._save_baseline(baseline)
+
+        # Batch-save all baselines in a single transaction
+        await self._save_baselines_batch(list(baselines.values()))
 
         self._emit_progress("baseline", "complete", f"Baselines computed for {len(baselines)} entities", 100)
         logger.info("Built %d entity baselines from %d events", len(baselines), len(events))
@@ -155,7 +157,6 @@ class BehavioralBaselineAgent:
         """
         Score a single SecurityEvent against its entity's baseline.
 
-        If score ≥ 0.6  → store in SQLite alerts table.
         If score ≥ 0.9  → also add Alert node to Neo4j.
         """
         await self._ensure_db()
@@ -165,11 +166,8 @@ class BehavioralBaselineAgent:
         )
         anomaly = self._scorer.compute_score(event, baseline)
 
-        if anomaly.threshold_breached:
-            await self._save_alert(anomaly)
-
         if anomaly.score >= 0.9 and self._driver:
-            asyncio.get_event_loop().run_in_executor(
+            asyncio.get_running_loop().run_in_executor(
                 None, self._write_alert_neo4j, anomaly, event
             )
 
@@ -209,16 +207,15 @@ class BehavioralBaselineAgent:
         # Apply correlation boost within 60-min windows
         correlated_scores = self._apply_correlation_boost(scored, events)
 
-        # Re-persist boosted alerts
-        for score in correlated_scores:
-            if score.threshold_breached:
-                await self._save_alert(score)
+        # Batch-persist only the final correlated alerts that breach the threshold
+        boosted_alerts = [s for s in correlated_scores if s.threshold_breached]
+        await self._save_alerts_batch(boosted_alerts)
 
         correlated_scores.sort(key=lambda s: s.score, reverse=True)
         self._emit_progress(
             "scan", "complete",
             f"Scored {len(correlated_scores)} events; "
-            f"{sum(1 for s in correlated_scores if s.threshold_breached)} anomalies detected",
+            f"{len(boosted_alerts)} anomalies detected",
             100,
         )
         return correlated_scores
@@ -413,8 +410,14 @@ class BehavioralBaselineAgent:
 
     async def _save_baseline(self, baseline: Baseline) -> None:
         """Upsert a single Baseline record into SQLite."""
+        await self._save_baselines_batch([baseline])
+
+    async def _save_baselines_batch(self, baselines: list[Baseline]) -> None:
+        """Upsert a list of Baseline records into SQLite in a single transaction."""
+        if not baselines:
+            return
         async with aiosqlite.connect(self._db_path) as db:
-            await db.execute(
+            await db.executemany(
                 """
                 INSERT OR REPLACE INTO baselines
                 (entity_id, entity_type, auth_hours, typical_source_ips,
@@ -422,40 +425,52 @@ class BehavioralBaselineAgent:
                  avg_bytes_per_session, computed_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (
-                    baseline.entity_id,
-                    baseline.entity_type,
-                    json.dumps(baseline.auth_hours),
-                    json.dumps(baseline.typical_source_ips),
-                    json.dumps(baseline.typical_destinations),
-                    json.dumps(baseline.typical_ports),
-                    baseline.avg_daily_connections,
-                    baseline.avg_bytes_per_session,
-                    baseline.computed_at.isoformat(),
-                ),
+                [
+                    (
+                        b.entity_id,
+                        b.entity_type,
+                        json.dumps(b.auth_hours),
+                        json.dumps(b.typical_source_ips),
+                        json.dumps(b.typical_destinations),
+                        json.dumps(b.typical_ports),
+                        b.avg_daily_connections,
+                        b.avg_bytes_per_session,
+                        b.computed_at.isoformat(),
+                    )
+                    for b in baselines
+                ]
             )
             await db.commit()
 
     async def _save_alert(self, anomaly: AnomalyScore) -> None:
         """Persist an anomaly-threshold-breaching score to the alerts table."""
-        alert_id = f"alrt_{uuid.uuid4().hex[:12]}"
+        await self._save_alerts_batch([anomaly])
+
+    async def _save_alerts_batch(self, anomalies: list[AnomalyScore]) -> None:
+        """Persist a list of anomaly-threshold-breaching scores to the alerts table in a single transaction."""
+        if not anomalies:
+            return
+        now_str = datetime.now(timezone.utc).isoformat()
         async with aiosqlite.connect(self._db_path) as db:
-            await db.execute(
+            await db.executemany(
                 """
                 INSERT OR IGNORE INTO alerts
                 (alert_id, event_id, entity_id, score, severity,
                  contributing_factors, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
-                (
-                    alert_id,
-                    anomaly.event_id,
-                    anomaly.entity_id,
-                    anomaly.score,
-                    anomaly.severity,
-                    json.dumps(anomaly.contributing_factors),
-                    datetime.utcnow().isoformat(),
-                ),
+                [
+                    (
+                        f"alrt_{uuid.uuid4().hex[:12]}",
+                        a.event_id,
+                        a.entity_id,
+                        a.score,
+                        a.severity,
+                        json.dumps(a.contributing_factors),
+                        now_str,
+                    )
+                    for a in anomalies
+                ]
             )
             await db.commit()
 

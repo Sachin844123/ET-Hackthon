@@ -112,7 +112,7 @@ services:
     networks:
       - autopsy-net
     ports:
-      - "3000:3000"   # Vite dev server
+      - "5173:5173"   # Vite dev server
     environment:
       VITE_API_URL: http://backend:8000
       VITE_NEO4J_URL: http://localhost:7474
