@@ -1,191 +1,182 @@
-<div align="center">
-  
-# Attack Chain Autopsy Engine
+# ⚔️ Attack Chain Autopsy Engine
 
-**AI-Powered Cyber Resilience Platform for Critical National Infrastructure**
+### **AI-Powered Cyber Resilience & Retroactive Incident Reconstruction for Critical National Infrastructure (CNI)**
 
-[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![React 18](https://img.shields.io/badge/React-18-61DAFB.svg?logo=react&logoColor=black)](https://reactjs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Neo4j](https://img.shields.io/badge/Neo4j-Graph_DB-018bff.svg?logo=neo4j&logoColor=white)](https://neo4j.com/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-Agents-orange.svg)](https://python.langchain.com/docs/langgraph/)
+[![LLM: Groq Llama--3.3](https://img.shields.io/badge/LLM-Groq_Llama--3.3-orange?logo=groq&logoColor=white)](https://groq.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> *"We don't detect attacks. We reconstruct the chain of failures that made them invisible — and prove when we would have caught them."*
-
-<p align="center">
-  <b>Built for ET AI Hackathon 2026 — Problem Statement 7</b>
-</p>
-
-</div>
+> *"We don't just detect attacks. We reconstruct the chronological chain of failures that made them invisible, and prove exactly when and how a modern AI baseline would have stopped them."*
+>
+> **Built for ET AI Hackathon 2026 — Problem Statement 7**
 
 ---
 
 ## 📖 Table of Contents
-- [The Core Differentiator](#-the-core-differentiator)
-- [Architecture & Agents](#-architecture--agents)
-- [Quick Start](#-quick-start)
-- [Demo Scenario: AIIMS Delhi](#-demo-scenario--aiims-delhi-ransomware-2022)
-- [Project Structure](#-project-structure)
-- [API Endpoints](#-api-endpoints)
-- [Design Philosophy](#-design-philosophy)
-- [Regulatory Context](#-regulatory-context)
+- [🧬 The Core Differentiator](#-the-core-differentiator)
+- [🏗️ System Architecture & LangGraph Pipeline](#%EF%B8%8F-system-architecture--langgraph-pipeline)
+- [⚡ Premium UI & Autopsy Dashboard](#-premium-ui--autopsy-dashboard)
+- [🚀 Quick Start & Deployment](#-quick-start--deployment)
+- [🎬 Live Demo Scenario: AIIMS Delhi 2022](#-live-demo-scenario-aiims-delhi-2022)
+- [🔌 API Endpoints Reference](#-api-endpoints-reference)
+- [⚙️ Recent Optimization & Hygiene Upgrades](#%EF%B8%8F-recent-optimization--hygiene-upgrades)
+- [🛡️ Design & Forensic Integrity](#%EF%B8%8F-design--forensic-integrity)
+- [🏛️ Regulatory Compliance & CNI Guidelines](#%EF%B8%8F-regulatory-compliance--cni-guidelines)
 
 ---
 
 ## 🧬 The Core Differentiator: Retroactive Reconstruction
 
-Most security tools ask: *"Did something bad happen right now?"*  
-We ask: *"Given what we now know about this breach — when would a behavioral AI have caught it, and what would it have done?"*
+Most cyber security systems ask: *"Did something malicious happen in the last 5 minutes?"*  
+**The Autopsy Engine asks:** *"Given the full context of this historical breach, when did the attacker first deviate from normal behavior, and what automated playbooks would have contained them?"*
 
-**AIIMS Delhi 2022 Benchmark:** 
-- **Reality:** Attackers dwell for 22 days undetected. 
-- **Our Engine:** Flags Day 1, enables containment Day 3 — **saving 19 days** before ransomware deployment.
-
-This is how you prove detection capability before buying a system. This is how you justify security investment to a hospital board. This is how you learn from breaches you survived — and from ones you didn't.
+### **AIIMS Delhi 2022 Benchmark Study:**
+* **The Reality:** Threat actors dwelled inside the network for **22 days** undetected before deploying ransomware.
+* **Our Engine:** Flags anomaly patterns on **Day 1**, generates a high-confidence alert on **Day 3**, and executes automated containment by **Day 12**.
+* **The Business Case:** **Saves 19 days** of dwell time, preventing massive service disruption and data loss.
 
 ---
 
-## 🏗️ Architecture & Agents
+## 🏗️ System Architecture & LangGraph Pipeline
 
-### System Topology
+The platform is designed around a **5-agent cooperative LangGraph pipeline** managed via a central `StateGraph` orchestrator.
+
 ```text
-┌──────────────────────────────────────────────────────────────────┐
-│              5-Agent LangGraph Pipeline (StateGraph)             │
-├──────────────┬────────────────┬──────────────┬───────────────────┤
-│ LogIngestion │  Behavioral    │  TTP         │  Retroactive      │
-│   Agent      │  Baseline      │  Attribution │  Prediction       │
-│              │  Agent         │  Agent       │  Agent            │
-├──────────────┴────────────────┴──────────────┴───────────────────┤
-│                  Autonomous Response Agent (SOAR)                │
-│       [ANTI_RANSOMWARE | C2_CONTAINMENT | ISOLATE_HOST |         │
-│                     CREDENTIAL_REVOCATION]                       │
-└──────────────────────────────────────────────────────────────────┘
+ ┌──────────────────────────────────────────────────────────────────┐
+ │              5-Agent LangGraph Pipeline (StateGraph)             │
+ ├──────────────┬────────────────┬──────────────┬───────────────────┤
+ │ LogIngestion │  Behavioral    │  TTP         │  Retroactive      │
+ │   Agent      │  Baseline      │  Attribution │  Prediction       │
+ │              │  Agent         │  Agent       │  Agent            │
+ ├──────────────┴────────────────┴──────────────┴───────────────────┤
+ │                  Autonomous Response Agent (SOAR)                │
+ │       [ANTI_RANSOMWARE | C2_CONTAINMENT | ISOLATE_HOST |         │
+ │                     CREDENTIAL_REVOCATION]                       │
+ └──────────────────────────────────────────────────────────────────┘
          │                         │                  │
       FastAPI                   Neo4j             ChromaDB
    (SSE Streaming)          (Attack Graph)     (Vector Store)
          │                         │
       React 18               MITRE ATT&CK
-  react-force-graph-3d        STIX Data
-      Custom D3.js              LangGraph
+    Vite Server               STIX Data
 ```
 
 ### The 5 AI Agents
 
-| Agent | File | Primary Role | Technical Detail |
-|-------|------|--------------|------------------|
-| **LogIngestionAgent** | `ingestion_agent.py` | Parse & Vectorize | Parses EVTX/Syslog; embeds via `text-embedding-3-small`; upserts Neo4j nodes/edges. |
-| **BehavioralBaselineAgent** | `baseline_agent.py` | Profile & Score | Builds 30-day baselines; scores time/location/volume anomalies; applies 60-min correlation boost. |
-| **TTAttributionAgent** | `attribution_agent.py` | Map & Attribute | Pattern-matches MITRE ATT&CK; uses Claude Sonnet 4.6 for actor attribution (e.g., APT41). |
-| **RetroactivePredictionAgent** | `retroactive_agent.py` | Time Replay | Chronological log replay; calculates dynamic alerts; determines exact prevention window. |
-| **AutonomousResponseAgent** | `response_agent.py` | SOAR & Audit | Executes blast-radius gated playbooks; writes cryptographically hashed SQLite audit trails. |
+| Agent | Module | Primary Role | Technical Implementation Details |
+| :--- | :--- | :--- | :--- |
+| **LogIngestionAgent** | `ingestion_agent.py` | Parse, Extract & Embed | Parses raw EVTX, Syslog, and proxy logs. Generates embeddings using OpenAI/Groq vectors and upserts nodes/relationships into **Neo4j** graph database. |
+| **BehavioralBaselineAgent** | `baseline_agent.py` | Profile & Anomaly Score | Builds user and entity baselines; calculates time, volume, and location anomaly indices with sliding-window correlation boosts. |
+| **TTAttributionAgent** | `attribution_agent.py` | MITRE TTP & Actor Attribution | Maps anomalies to MITRE ATT&CK techniques. Uses **Groq API** (`llama-3.3-70b-versatile`) to perform advanced actor attribution (e.g. APT41, Mustang Panda). |
+| **RetroactivePredictionAgent** | `retroactive_agent.py` | Chronological Replay | Simulates chronological log playback; triggers alerts, tracks timeline progress, and calculates the exact prevention window. |
+| **AutonomousResponseAgent** | `response_agent.py` | SOAR & Blast-Radius Gating | Recommends containment playbooks; executes low blast-radius tasks automatically and queues high blast-radius actions for human-in-the-loop validation. |
 
 ---
 
-## 🚀 Quick Start
+## ⚡ Premium UI & Autopsy Dashboard
 
-The quickest way to get the engine running is using our provided setup script.
+The front-end user experience has been upgraded to a futuristic, dark-themed command center featuring:
+
+* **High-Fidelity Dashboard Header:** Displays campaign-level indicators (critical threat status badge, target name, environment description), a segmented confidence rating strip, and a report downloader.
+* **Chronological Segmented Timeline:** Interactive horizontal timeline showing the progression of stages. The stages are bridged by dynamic gradient connection tracks containing glowing white dot status indicators centered in each interval.
+* **Custom TTP Cards:** Renders the technique code (themed to the stage color), technique name, and a confidence progress bar showing the precise probability of detection.
+* **6-Column Stats Panel:** Displays Total Duration, Contained Before Impact check, Completion % (e.g., 67% stages detected), Alert counts, Average Response Time, and System Status.
+* **Automatic Layout Scaling:** Omit empty stages (e.g., `Defense Evasion`) to keep the timeline clean and compact.
+
+---
+
+## 🚀 Quick Start & Deployment
+
+The quickest way to get the engine running is using our automated environment setup script.
 
 ### Prerequisites
-- Docker + Docker Compose
-- Python 3.11+ & Node.js 18+
+* Docker + Docker Compose
+* Python 3.11+
+* Node.js 18+
 
 ### Setup Commands
+
 ```bash
 # 1. Clone the repository
-git clone <repo> && cd attack-chain-autopsy
+git clone https://github.com/Sachin844123/ET-Hackthon.git
+cd attack-chain-autopsy
 
 # 2. Run the automated 1-click setup script
-# (Prompts for API keys, downloads MITRE data, starts Neo4j, installs dependencies, and boots servers)
+# (Prompts for API keys, downloads MITRE ATT&CK dataset, boots Neo4j, installs dependencies, and runs the servers)
 bash scripts/setup_demo.sh
 ```
 
-**Access Points:**
-- **Demo Dashboard:** [http://localhost:5173/demo](http://localhost:5173/demo)
-- **API Swagger Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
-- **Neo4j Browser:** [http://localhost:7474](http://localhost:7474)
+### Access Points
+* **Vite Web Dashboard:** [http://localhost:5173/demo](http://localhost:5173/demo)
+* **API Swagger Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+* **Neo4j Browser Console:** [http://localhost:7474](http://localhost:7474)
 
-> 🛡️ **Zero-Infra Graceful Degradation:** No internet? No API keys? The backend degrades gracefully. MITRE ATT&CK runs from stubs, ChromaDB is bypassed, and Claude Sonnet falls back to cached responses. The demo **will always run**.
-
----
-
-## 🎬 Demo Scenario — AIIMS Delhi Ransomware 2022
-
-The engine comes pre-loaded with the AIIMS Delhi incident as the centrepiece demo. Running the autopsy (`POST /api/demo/aiims/live`) triggers the live 5-agent pipeline via SSE:
-
-| Timeline | Detection Signal | MITRE TTP | Confidence | Action Triggered |
-|----------|------------------|-----------|------------|------------------|
-| **Day 1** (T-21) | `svc_backup$` logs in at 02:14 AM from unknown IP `10.0.4.47` | T1078 | **73%** | Alert: Investigate account |
-| **Day 3** (T-19) | SMB sweep from `AIIMS-PATIENT-MGMT-01` — 5 hosts in 4 min | T1021.002 | **81%** | **HIGH**: Isolate host + revoke creds |
-| **Day 7** (T-15) | 47.3GB staged to `C:\Windows\Temp\~logs` via 7z.exe | T1560.001 | **89%** | **CRITICAL**: Block outbound + declare IR |
-| **Day 12** (T-10)| Cobalt Strike beacon to `185.220.101.47` (Tor exit) | T1071.001 | **99%** | **EMERGENCY**: Sinkhole C2, CERT-In notify |
-| **Day 22** (T-0) | Ransomware deployed — 284K patient records encrypted | T1486 | — | *Actual historical discovery date* |
-
-> 🏆 **Bottom line: Detection Day 1, high-confidence Day 3, containment possible by Day 12. Actual discovery: Day 22. We save 19 days.**
+> [!NOTE]
+> **Zero-Infra Graceful Degradation:** Bypasses external dependencies if internet or API keys are unavailable. The LLM attribution agent falls back to a deterministic local rule engine, MITRE ATT&CK queries standard JSON stubs, and the demo continues to run flawlessly.
 
 ---
 
-## 📂 Project Structure
+## 🎬 Live Demo Scenario: AIIMS Delhi 2022
 
-```text
-attack-chain-autopsy/
-├── backend/
-│   ├── main.py                     # FastAPI app + SSE endpoints + orchestrator wiring
-│   ├── config.py                   # Pydantic settings from .env
-│   ├── models/schemas.py           # Core Pydantic data models
-│   ├── graph/schema.py             # Neo4j Cypher schema + Mock data
-│   ├── agents/                     # ★ THE 5 LANGGRAPH AGENTS
-│   │   ├── ingestion_agent.py      
-│   │   ├── baseline_agent.py       
-│   │   ├── attribution_agent.py    
-│   │   ├── retroactive_agent.py    
-│   │   ├── response_agent.py       
-│   │   └── orchestrator.py         # StateGraph orchestrator
-│   ├── mitre/attck_client.py       # STIX processor
-│   └── utils/anomaly_scorer.py     # Multi-factor scoring logic
-├── data/synthetic/                 # AIIMS & CBSE scenario data
-├── frontend/                       # React 18 + Vite + Tailwind
-│   └── src/
-│       ├── pages/                  # Landing + Demo pages
-│       └── components/             # Timeline, 3D graph, playbook UI
-├── scripts/
-│   ├── setup_demo.sh               # One-shot environment bootstrap
-│   └── populate_graph.py           # Neo4j data loader
-└── tests/test_aiims_demo.py        # End-to-end integration suite
+The simulation replays the 22-day historical dwell-time of the AIIMS Delhi breach, showing where the engine intervenes:
+
+```mermaid
+timeline
+    title AIIMS Delhi Ransomware Autopsy Replay
+    Day 1 : Ingestion: svc_backup$ login from unknown IP (T1078)
+    Day 3 : Baseline: SMB port sweep across patient management subnet (T1021.002) - Response Triggered
+    Day 7 : Attribution: 47.3GB staged for exfiltration (T1560.001)
+    Day 12 : Prediction: Tor exit C2 beaconing detected (T1071.001)
+    Day 22 : Historical: Files encrypted (T1486) - Breach completed in history
 ```
 
+* **Day 1 (T-21):** Anomaly detected. A service backup account logs in from an anomalous subnet at 02:14 AM.
+* **Day 3 (T-19):** **Prevention Triggered.** Internal port sweep detected. Automated response isolates the host and revokes the credential, neutralizing the threat 19 days before ransomware execution.
+
 ---
 
-## 🔌 Core API Endpoints
+## 🔌 API Endpoints Reference
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/autopsy/run` | Run full 5-agent pipeline — **SSE stream** |
-| `POST` | `/api/demo/aiims/live` | Re-run live AIIMS pipeline — **SSE stream** |
-| `GET`  | `/api/demo/aiims` | Serve pre-computed AIIMS result (instant load) |
-| `GET`  | `/api/graph/attack/{id}`| Fetch attack chain graph for React 3D rendering |
-| `POST` | `/api/playbook/approve/{id}`| Human-in-the-loop SOAR approval gate |
-| `GET`  | `/api/audit/export/{id}`| Export cryptographically hashed audit trail |
+| :--- | :--- | :--- |
+| `POST` | `/api/autopsy/run` | Triggers the full 5-agent pipeline and returns an SSE stream of real-time events. |
+| `POST` | `/api/demo/aiims/live` | Simulates and streams the live AIIMS Delhi attack chain autopsy via SSE. |
+| `GET` | `/api/demo/aiims` | Instantly returns the cached autopsy result for rapid frontend dashboard rendering. |
+| `GET` | `/api/graph/attack/{id}` | Fetches nodes and relationships of the attack graph for React D3 layout rendering. |
+| `POST` | `/api/playbook/approve/{id}` | Human-in-the-loop approval endpoint for high blast-radius SOAR playbooks. |
+| `GET` | `/api/audit/export/{id}` | Exports the cryptographically hashed SOAR execution log for forensic review. |
 
 ---
 
-## 🛡️ Design Philosophy
+## ⚙️ Recent Optimization & Hygiene Upgrades
 
-1. **Retroactive First**: Proving detection capability on known historical breaches is infinitely more valuable than theoretical detection on unknown zero-days.
-2. **Blast Radius Gates**: No autonomous action with a HIGH blast radius (e.g., VLAN isolation) executes without human approval.
-3. **Evidentiary Alerting**: No black-box AI scores. Every alert natively links to specific log events, MITRE techniques, and baseline deviation metrics.
-4. **CNI-Grade Reliability**: Tenacity retry logic, structlog structured logging, and graceful degradation. Built for hospitals, not just hackathons.
+To ensure CNI-grade performance and code quality, we have executed the following modifications:
 
----
-
-## 🏛️ Regulatory Context
-
-- **Mandatory Reporting**: Aligned with IT Act Section 70B (April 2022 Directions) requiring incident reporting to CERT-In within 6 hours.
-- **CII Protection**: Adheres to NCIIPC Critical Information Infrastructure protection guidelines.
-- **Forensic Integrity**: The Playbook Executor's audit trail export is designed to meet strict forensic chain-of-custody requirements for legal admissibility.
+* **Groq API Migration:** Replaced the previous Anthropic Claude integration with **Groq's OpenAI-compatible client** using the `llama-3.3-70b-versatile` model, lowering latency and removing operating costs.
+* **SQLite Batch Operations:** Refactored `baseline_agent.py` to batch write operations (`_save_baselines_batch`, `_save_alerts_batch`) using `executemany` in a single transaction. This prevents file-lock collisions in high-throughput environments.
+* **Log Parser Resilience:** Improved `parse_synthetic_json` in `log_parsers.py` to log specific JSON decoding exceptions and skip malformed entries, continuing to ingest valid events instead of failing the entire log file.
+* **CORS Hardening:** Replaced wildcard `["*"]` CORS allowance in `backend/main.py` with explicit developer origins to secure local cross-site communication.
+* **Dependency & Size Reduction:** Cleaned up heavy, unused packages (`react-force-graph-3d`, `three`, etc.) to reduce package size. Pinned all backend packages in `requirements.txt` to guarantee reproducible builds.
 
 ---
 
-<div align="center">
-  <p><i>Developed for the ET AI Hackathon 2026. Code released under the MIT License.</i></p>
-</div>
+## 🛡️ Design & Forensic Integrity
+
+1. **Cryptographic Auditing:** Every action executed by the **Autonomous Response Agent** is committed to an SQLite audit database. Each entry is cryptographically signed and hashed (SHA-256) to ensure legal admissibility in court.
+2. **Blast Radius Gating:** The response agent categorizes SOAR actions into `LOW` (auto-execute, e.g. sinkhole C2 domain) and `HIGH` (require human approval, e.g. isolate production DB servers).
+3. **Evidence-Linked Alerting:** Every alert produced includes a traceability vector referencing the specific log events, MITRE tactic mapping, and baseline deviation score.
+
+---
+
+## 🏛️ Regulatory Compliance & CNI Guidelines
+
+* **IT Act Section 70B (CERT-In):** Integrates reporting templates designed to dispatch incident details within the 6-hour reporting window mandated by CERT-In directions.
+* **NCIIPC Protection Guidelines:** Adheres to critical information infrastructure guidelines by protecting forensic records and isolating operational components.
+
+---
+
+*Developed for the ET AI Hackathon 2026. Released under the MIT License.*
