@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://et-hackthon-backend-oic4.onrender.com/api/:path*"
+    },
+    {
+      "source": "/health",
+      "destination": "https://et-hackthon-backend-oic4.onrender.com/health"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
