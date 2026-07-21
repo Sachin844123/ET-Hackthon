@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiUrl } from '../lib/api';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -83,7 +84,7 @@ export default function Landing() {
 
   // Load cached AIIMS stats for hero card
   useEffect(() => {
-    fetch('/api/demo/aiims')
+    fetch(apiUrl('/api/demo/aiims'))
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data) {

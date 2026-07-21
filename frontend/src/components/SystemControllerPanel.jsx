@@ -278,66 +278,83 @@ export default function SystemControllerPanel({
           </div>
         </div>
       ) : tab === 'alert-timeline' ? (
-        /* Quick Metrics for Alert Timeline — clean 2×2 grid */
+        /* Quick Metrics for Alert Timeline — premium 2×2 grid */
         <div
           className="rounded-xl border p-4"
           style={{ background: 'rgba(15,21,37,0.9)', borderColor: 'rgba(30,41,59,0.8)' }}
         >
-          <h3 className="text-[10px] font-bold text-white tracking-widest mb-3 font-mono flex items-center gap-2">
+          <h3 className="text-[10px] font-bold text-white tracking-widest mb-4 font-mono flex items-center gap-2">
             <Activity className="w-3.5 h-3.5 text-cyan-400" /> QUICK METRICS
           </h3>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-3">
 
             {/* Total Alerts */}
             <div
-              className="flex flex-col gap-1.5 p-2.5 rounded-lg border"
-              style={{ background: 'rgba(6,182,212,0.06)', borderColor: 'rgba(6,182,212,0.15)' }}
+              className="relative flex flex-col p-3 rounded-xl overflow-hidden"
+              style={{
+                background: 'linear-gradient(135deg, rgba(6,182,212,0.08) 0%, rgba(6,182,212,0.02) 100%)',
+                border: '1px solid rgba(6,182,212,0.2)',
+                boxShadow: '0 0 20px rgba(6,182,212,0.05), inset 0 1px 0 rgba(255,255,255,0.03)',
+              }}
             >
-              <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest">Total Alerts</span>
-              <span className="text-xl font-bold font-mono text-cyan-400 leading-none">142</span>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <Bell className="w-3 h-3 text-slate-500" />
+              <div className="absolute top-0 left-0 w-full h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #06b6d4, transparent)' }} />
+              <span className="text-[8px] font-mono text-slate-400 uppercase tracking-widest mb-1">Total Alerts</span>
+              <span className="text-2xl font-bold font-mono text-cyan-400 leading-none" style={{ textShadow: '0 0 12px rgba(6,182,212,0.4)' }}>142</span>
+              <div className="flex items-center gap-1.5 mt-2">
+                <Bell className="w-3 h-3 text-cyan-600" />
                 <span className="text-[8px] font-mono text-slate-500">All Stages</span>
               </div>
             </div>
 
             {/* High Severity */}
             <div
-              className="flex flex-col gap-1.5 p-2.5 rounded-lg border"
-              style={{ background: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.15)' }}
+              className="relative flex flex-col p-3 rounded-xl overflow-hidden"
+              style={{
+                background: 'linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(239,68,68,0.02) 100%)',
+                border: '1px solid rgba(239,68,68,0.2)',
+                boxShadow: '0 0 20px rgba(239,68,68,0.05), inset 0 1px 0 rgba(255,255,255,0.03)',
+              }}
             >
-              <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest">High Severity</span>
-              <span className="text-xl font-bold font-mono text-red-400 leading-none">23</span>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <ShieldAlert className="w-3 h-3 text-slate-500" />
+              <div className="absolute top-0 left-0 w-full h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #ef4444, transparent)' }} />
+              <span className="text-[8px] font-mono text-slate-400 uppercase tracking-widest mb-1">High Severity</span>
+              <span className="text-2xl font-bold font-mono text-red-400 leading-none" style={{ textShadow: '0 0 12px rgba(239,68,68,0.4)' }}>23</span>
+              <div className="flex items-center gap-1.5 mt-2">
+                <ShieldAlert className="w-3 h-3 text-red-600" />
                 <span className="text-[8px] font-mono text-slate-500">16.2% of total</span>
               </div>
             </div>
 
             {/* Avg Confidence */}
             <div
-              className="flex flex-col gap-1.5 p-2.5 rounded-lg border"
-              style={{ background: 'rgba(245,158,11,0.06)', borderColor: 'rgba(245,158,11,0.15)' }}
+              className="relative flex flex-col p-3 rounded-xl overflow-hidden"
+              style={{
+                background: 'linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(245,158,11,0.02) 100%)',
+                border: '1px solid rgba(245,158,11,0.2)',
+                boxShadow: '0 0 20px rgba(245,158,11,0.05), inset 0 1px 0 rgba(255,255,255,0.03)',
+              }}
             >
-              <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest">Avg Confidence</span>
-              <span className="text-xl font-bold font-mono text-amber-400 leading-none">84%</span>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                {/* Mini donut progress bar */}
-                <div className="flex-1 h-1 rounded-full bg-slate-800 overflow-hidden">
-                  <div className="h-full rounded-full bg-amber-400" style={{ width: '84%' }} />
-                </div>
+              <div className="absolute top-0 left-0 w-full h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #f59e0b, transparent)' }} />
+              <span className="text-[8px] font-mono text-slate-400 uppercase tracking-widest mb-1">Avg Confidence</span>
+              <span className="text-2xl font-bold font-mono text-amber-400 leading-none" style={{ textShadow: '0 0 12px rgba(245,158,11,0.4)' }}>84%</span>
+              <div className="mt-2 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(15,23,42,0.8)' }}>
+                <div className="h-full rounded-full" style={{ width: '84%', background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', boxShadow: '0 0 8px rgba(245,158,11,0.5)' }} />
               </div>
             </div>
 
             {/* Response Time */}
             <div
-              className="flex flex-col gap-1.5 p-2.5 rounded-lg border"
-              style={{ background: 'rgba(34,197,94,0.06)', borderColor: 'rgba(34,197,94,0.15)' }}
+              className="relative flex flex-col p-3 rounded-xl overflow-hidden"
+              style={{
+                background: 'linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(34,197,94,0.02) 100%)',
+                border: '1px solid rgba(34,197,94,0.2)',
+                boxShadow: '0 0 20px rgba(34,197,94,0.05), inset 0 1px 0 rgba(255,255,255,0.03)',
+              }}
             >
-              <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest">Resp. Time</span>
-              <span className="text-xl font-bold font-mono text-green-400 leading-none">4.2h</span>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <Clock className="w-3 h-3 text-slate-500" />
+              <div className="absolute top-0 left-0 w-full h-[2px]" style={{ background: 'linear-gradient(90deg, transparent, #22c55e, transparent)' }} />
+              <span className="text-[8px] font-mono text-slate-400 uppercase tracking-widest mb-1">Resp. Time</span>
+              <span className="text-2xl font-bold font-mono text-green-400 leading-none" style={{ textShadow: '0 0 12px rgba(34,197,94,0.4)' }}>4.2h</span>
+              <div className="flex items-center gap-1.5 mt-2">
+                <Clock className="w-3 h-3 text-green-600" />
                 <span className="text-[8px] font-mono text-slate-500">Avg. containment</span>
               </div>
             </div>

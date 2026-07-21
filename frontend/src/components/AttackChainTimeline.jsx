@@ -196,14 +196,14 @@ export default function AttackChainTimeline({ autopsy_result }) {
             cursor: 'pointer',
             transition: 'all 0.2s',
           }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-            e.currentTarget.style.color = '#ffffff';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.currentTarget.style.color = '#d1d5db';
-          }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.color = '#ffffff';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.color = '#d1d5db';
+            }}
           >
             <Download className="w-4 h-4" /> EXPORT REPORT
           </button>

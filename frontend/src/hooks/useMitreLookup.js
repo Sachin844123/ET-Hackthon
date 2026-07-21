@@ -5,6 +5,7 @@
 //   const tech = getTechnique('T1078');  // { name, tactic, description } or null
 
 import { useState, useEffect, useCallback } from 'react';
+import { apiUrl } from '../lib/api';
 
 // Module-level cache — shared across all component instances
 const MITRE_CACHE = new Map();
@@ -42,7 +43,7 @@ async function fetchTechnique(techniqueId) {
 
   PENDING_FETCHES.add(techniqueId);
   try {
-    const res = await fetch(`/api/mitre/technique/${techniqueId}`);
+    const res = await fetch(apiUrl(`/api/mitre/technique/${techniqueId}`));
     if (res.ok) {
       const data = await res.json();
       MITRE_CACHE.set(techniqueId, data);

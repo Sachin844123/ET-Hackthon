@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiUrl } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, LayoutDashboard, Network, Bell, BookOpen,
@@ -13,20 +14,19 @@ import ThreatIntelPanel from '../components/ThreatIntelPanel';
 import ParticleBackground from '../components/ParticleBackground';
 
 const TABS = [
-  { id: 'kill-chain',     label: 'KILL CHAIN',    icon: Shield },
-  { id: 'attack-graph',   label: 'ATTACK GRAPH',  icon: Network },
+  { id: 'kill-chain', label: 'KILL CHAIN', icon: Shield },
+  { id: 'attack-graph', label: 'ATTACK GRAPH', icon: Network },
   { id: 'alert-timeline', label: 'ALERT TIMELINE', icon: Bell },
-  { id: 'playbooks',      label: 'PLAYBOOKS',     icon: BookOpen },
-  { id: 'threat-intel',   label: 'THREAT INTEL',  icon: Target },
+  { id: 'playbooks', label: 'PLAYBOOKS', icon: BookOpen },
+  { id: 'threat-intel', label: 'THREAT INTEL', icon: Target },
 ];
 
 const SIDEBAR_ICONS = [
   { icon: LayoutDashboard, label: 'Dashboard', tab: 'kill-chain' },
-  { icon: Network,         label: 'Attack Graph', tab: 'attack-graph' },
-  { icon: Bell,            label: 'Alerts', tab: 'alert-timeline' },
-  { icon: BookOpen,        label: 'Playbooks', tab: 'playbooks' },
-  { icon: Play,            label: 'Threat Intel', tab: 'threat-intel' },
-  { icon: Settings,        label: 'Settings', tab: null },
+  { icon: Network, label: 'Attack Graph', tab: 'attack-graph' },
+  { icon: Bell, label: 'Alerts', tab: 'alert-timeline' },
+  { icon: BookOpen, label: 'Playbooks', tab: 'playbooks' },
+  { icon: Play, label: 'Threat Intel', tab: 'threat-intel' },
 ];
 
 const SCENARIOS = [
@@ -47,7 +47,7 @@ export default function Demo() {
   // Load cached result on mount for instant demo
   useEffect(() => {
     const scenarioCfg = SCENARIOS.find(s => s.label === scenario) || SCENARIOS[0];
-    fetch(scenarioCfg.cacheEndpoint)
+    fetch(apiUrl(scenarioCfg.cacheEndpoint))
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data) {
@@ -56,10 +56,10 @@ export default function Demo() {
           setAlertCount(data.retroactive_alerts?.length || 0);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // Health check
-    fetch('/health')
+    fetch(apiUrl('/health'))
       .then(r => r.ok ? r.json() : null)
       .then(h => {
         if (h) setHealthStatus({
@@ -68,7 +68,7 @@ export default function Demo() {
           mitre: h.mitre_techniques_loaded > 5,
         });
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [scenario]);
 
   const startAutopsy = async () => {
@@ -80,7 +80,7 @@ export default function Demo() {
     const scenarioCfg = SCENARIOS.find(s => s.label === scenario) || SCENARIOS[0];
 
     try {
-      const response = await fetch(scenarioCfg.endpoint, { method: 'POST' });
+      const response = await fetch(apiUrl(scenarioCfg.endpoint), { method: 'POST' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       const reader = response.body.getReader();
@@ -124,7 +124,7 @@ export default function Demo() {
 
   const handleApprovePlaybook = async (execution_id) => {
     try {
-      const res = await fetch(`/api/playbook/approve/${execution_id}`, { method: 'POST' });
+      const res = await fetch(apiUrl(`/api/playbook/approve/${execution_id}`), { method: 'POST' });
       if (res.ok) {
         const updated = await res.json();
         setAutopsyResult(prev => {
@@ -242,11 +242,6 @@ export default function Demo() {
               />
             </button>
           ))}
-          <div className="mt-auto">
-            <button title="Export" className="w-8 h-8 rounded-lg flex items-center justify-center">
-              <LogOut className="w-4 h-4 text-slate-600 hover:text-slate-400 transition-colors" />
-            </button>
-          </div>
         </div>
 
         {/* Left Panel — SystemControllerPanel (hidden on attack-graph and kill-chain) */}
@@ -316,17 +311,17 @@ export default function Demo() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.25 }}
-                className="h-full overflow-y-auto"
+                className="h-full overflow-hidden"
               >
-              {/* Attack graph always renders (has its own empty state) */}
-              {activeTab === 'attack-graph' ? (
-                <AttackPathDiagram
-                  graph_nodes={autopsyResult?.graph_nodes || []}
-                  graph_edges={autopsyResult?.graph_edges || []}
-                  incident_id={autopsyResult?.incident_id || 'aiims_2022'}
-                  autopsyResult={autopsyResult}
-                />
-              ) : !isComplete && !isRunning ? (
+                {/* Attack graph always renders (has its own empty state) */}
+                {activeTab === 'attack-graph' ? (
+                  <AttackPathDiagram
+                    graph_nodes={autopsyResult?.graph_nodes || []}
+                    graph_edges={autopsyResult?.graph_edges || []}
+                    incident_id={autopsyResult?.incident_id || 'aiims_2022'}
+                    autopsyResult={autopsyResult}
+                  />
+                ) : !isComplete && !isRunning ? (
                   /* Empty state */
                   <div className="h-full flex flex-col items-center justify-center text-slate-600">
                     <div
@@ -357,8 +352,8 @@ export default function Demo() {
                       </div>
                       <div className="text-[11px] font-mono text-slate-500">
                         {progressSteps.length > 0
-                          ? (progressSteps[progressSteps.length - 1]?.summary || 'Reconstructing attack chain...')
-                          : 'Initializing agents...'}
+                           ? (progressSteps[progressSteps.length - 1]?.summary || 'Reconstructing attack chain...')
+                           : 'Initializing agents...'}
                       </div>
                     </div>
                     {progressSteps.length > 0 && (
@@ -382,12 +377,12 @@ export default function Demo() {
                 ) : (
                   <>
                     {activeTab === 'kill-chain' && (
-                      <div className="p-4 h-full">
+                      <div className="p-4 h-full overflow-hidden">
                         <AttackChainTimeline autopsy_result={autopsyResult} />
                       </div>
                     )}
                     {activeTab === 'alert-timeline' && (
-                      <div className="p-4 h-full">
+                      <div className="p-4 h-full overflow-hidden">
                         <RetroactiveTimeline
                           alerts={autopsyResult?.retroactive_alerts || []}
                           autopsyResult={autopsyResult}
@@ -395,7 +390,7 @@ export default function Demo() {
                       </div>
                     )}
                     {activeTab === 'playbooks' && (
-                      <div className="p-4 h-full">
+                      <div className="p-4 h-full overflow-hidden">
                         <PlaybookExecutor
                           executions={autopsyResult?.playbook_executions || []}
                           on_approve={handleApprovePlaybook}
@@ -403,7 +398,7 @@ export default function Demo() {
                       </div>
                     )}
                     {activeTab === 'threat-intel' && (
-                      <div className="p-4 h-full">
+                      <div className="p-4 h-full overflow-hidden">
                         <ThreatIntelPanel
                           actor_attribution={autopsyResult?.actor_attribution}
                           predicted_ttps={autopsyResult?.ttp_attributions || []}
