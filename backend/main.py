@@ -41,28 +41,11 @@ app = FastAPI(
 )
 
 # CORS configuration
-# Allow the Vite dev server (port 5173) and common Docker/production origins.
-# Never use allow_origins=["*"] because allow_credentials=True requires an
-# explicit origin list for CORS preflight to work correctly.
-_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",   # kept for backwards-compat during transition
-    "http://127.0.0.1:3000",
-    "http://localhost:8080",
-    "http://frontend:5173",    # docker service name
-    "https://attack-chain-autopsy.vercel.app",
-]
-_extra_origin = os.getenv("CORS_ORIGIN", "").strip()
-if _extra_origin:
-    for origin in _extra_origin.split(","):
-        if origin.strip():
-            _ALLOWED_ORIGINS.append(origin.strip())
-
+# Allow all origins (Starlette CORSMiddleware dynamically echoes the requesting origin 
+# when allow_credentials=True, making it fully compatible with Vercel and local dev).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_ALLOWED_ORIGINS,
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
