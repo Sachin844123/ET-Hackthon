@@ -135,17 +135,24 @@ def parse_synthetic_json(file_path: str) -> List[SecurityEvent]:
             _log.error("parse_synthetic_json: invalid JSON in %s — %s", file_path, exc)
             return events
 
-    if not isinstance(data, list):
-        data = [data]
+    if isinstance(data, dict):
+        if "events" in data and isinstance(data["events"], list):
+            data = data["events"]
+        elif "logs" in data and isinstance(data["logs"], list):
+            data = data["logs"]
+        elif "data" in data and isinstance(data["data"], list):
+            data = data["data"]
+        else:
+            data = [data]
 
     for idx, item in enumerate(data):
         try:
             # Generate a unique event_id if not present
-            event_id = item.get("event_id", f"evt_{os.path.basename(file_path)}_{idx}")
+            event_id = item.get("event_id", item.get("id", f"evt_{os.path.basename(file_path)}_{idx}"))
 
             # Extract source and destination
-            src = item.get("source_ip", item.get("host", "UNKNOWN"))
-            dst = item.get("dest_ip", item.get("dst_ip", "UNKNOWN"))
+            src = item.get("src_ip", item.get("source_ip", item.get("origin_host", item.get("hostname", item.get("host", "UNKNOWN")))))
+            dst = item.get("dst_ip", item.get("dest_ip", item.get("destination_ip", item.get("target", item.get("hostname", item.get("host", "UNKNOWN"))))))
 
             # Detect risk indicators
             indicators = detect_risk_indicators(item)
@@ -159,9 +166,9 @@ def parse_synthetic_json(file_path: str) -> List[SecurityEvent]:
                 dest_entity=dst,
                 raw_log=json.dumps(item),
                 parsed_fields=item,
-                anomaly_score=item.get("baseline_deviation_score", 0.0),
+                anomaly_score=item.get("baseline_deviation_score", 0.8 if item.get("severity") in ("high", "critical") else 0.0),
                 risk_indicators=indicators,
-                mitre_technique_id=item.get("mitre_technique"),
+                mitre_technique_id=item.get("mitre_technique", item.get("technique")),
             )
             events.append(evt)
         except Exception as exc:
