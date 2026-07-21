@@ -1,16 +1,19 @@
 {
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/:path*",
-      "destination": "https://et-hackthon-backend-oic4.onrender.com/api/:path*"
+      "src": "/api/(.*)",
+      "dest": "https://et-hackthon-backend-oic4.onrender.com/api/$1"
     },
     {
-      "source": "/health",
-      "destination": "https://et-hackthon-backend-oic4.onrender.com/health"
+      "src": "/health",
+      "dest": "https://et-hackthon-backend-oic4.onrender.com/health"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "handle": "filesystem"
+    },
+    {
+      "src": "/.*",
+      "dest": "/index.html"
     }
   ]
 }
