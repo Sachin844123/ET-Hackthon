@@ -45,3 +45,6 @@ data/mitre/*.json
 
 # ChromaDB vector store — never commit database files
 chroma_db/
+
+.env.production
+.gitignore

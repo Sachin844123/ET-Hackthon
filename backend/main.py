@@ -51,14 +51,18 @@ _ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://localhost:8080",
     "http://frontend:5173",    # docker service name
+    "https://attack-chain-autopsy.vercel.app",
 ]
 _extra_origin = os.getenv("CORS_ORIGIN", "").strip()
 if _extra_origin:
-    _ALLOWED_ORIGINS.append(_extra_origin)
+    for origin in _extra_origin.split(","):
+        if origin.strip():
+            _ALLOWED_ORIGINS.append(origin.strip())
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
